@@ -17,6 +17,9 @@ const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "";
 const BASE_RPC_URL = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
 const config: HardhatUserConfig = {
+  paths: {
+    sources: ".",
+  },
   solidity: {
     version: "0.8.30",  // Specify the Solidity version
     settings: {
