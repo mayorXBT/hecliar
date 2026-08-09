@@ -62,6 +62,7 @@ export function isLegalRobotAction(view: RobotObservation, action: RobotAction):
   if (action.type === "challenge") return view.currentBid !== null;
   if (action.type === "use-gadget") {
     return Boolean(view.gadget && !view.gadget.used
+      && Number.isInteger(action.target)
       && action.target >= 0 && action.target < view.dicePerSide);
   }
   return legalRaises(view.currentBid, view.dicePerSide)
