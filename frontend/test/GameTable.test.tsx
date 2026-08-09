@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GameTable } from "@/components/game/GameTable";
 
 const publicMatch = {
@@ -19,6 +19,7 @@ const publicMatch = {
 };
 
 describe("GameTable", () => {
+  afterEach(cleanup);
   it("shows only own dice and blocks an equal bid while challenge remains available", () => {
     const raise = vi.fn();
     render(
@@ -38,5 +39,19 @@ describe("GameTable", () => {
     fireEvent.click(screen.getByRole("button", { name: "Face 5" }));
     expect(screen.getByRole("button", { name: "Raise" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Challenge" })).toBeEnabled();
+  });
+
+  it("lets Echo choose every own die target and removes the control while pending", () => {
+    const useGadget = vi.fn();
+    render(<GameTable publicMatch={{ ...publicMatch, settings: { ...publicMatch.settings, gadgetsEnabled: true } }} privatePlayer={{ ownDice: [5, 2, 1, 6], gadget: "echo", scannerResult: null }} onRaise={vi.fn()} onChallenge={vi.fn()} onUseGadget={useGadget} pendingAction={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Use echo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Target die 4" }));
+    expect(useGadget).toHaveBeenCalledWith(3);
+  });
+
+  it("uses a section landmark so a page has one main landmark", () => {
+    render(<main><GameTable publicMatch={publicMatch} privatePlayer={{ ownDice: [5, 2, 1, 6], gadget: null, scannerResult: null }} onRaise={vi.fn()} onChallenge={vi.fn()} onUseGadget={vi.fn()} pendingAction={null} /></main>);
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("region", { name: "Hecliar game table" })).toBeVisible();
   });
 });

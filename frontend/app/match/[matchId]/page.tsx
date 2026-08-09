@@ -42,7 +42,7 @@ function MatchScreen() {
   if (!publicMatch || !privatePlayer || matchId === null) return <main className="match-page"><p className="live-note" aria-live="polite">Loading your private table…</p></main>;
   const act = async (work: () => Promise<void>) => { setError(null); try { await work(); await refresh(); } catch { setError("That action did not go through. The table has been refreshed."); await refresh(); } };
   if (publicMatch.status === "match-complete" && result) return <main className="match-page"><MatchResult winner={result.winner === 0 || result.winner === 1 ? (publicMatch.score[0] === 2 ? 0 : 1) : 0} score={publicMatch.score} onRematch={() => void act(() => gateway.acceptRematch(matchId))} /></main>;
-  if (publicMatch.status === "round-complete" && result) return <main className="match-page"><RoundResult result={result} onContinue={() => void act(() => gateway.continueMatch(matchId, publicMatch.actionSequence))} /></main>;
+  if (publicMatch.status === "round-complete" && result) return <main className="match-page"><RoundResult result={result} score={publicMatch.score} onContinue={() => void act(() => gateway.continueMatch(matchId, publicMatch.actionSequence))} /></main>;
   return <main className="match-page"><GameTable publicMatch={publicMatch} privatePlayer={privatePlayer} onRaise={(bid) => act(() => gateway.raise(matchId, bid, publicMatch.actionSequence))} onChallenge={() => act(() => gateway.challenge(matchId, publicMatch.actionSequence))} onUseGadget={(target) => act(() => gateway.useGadget(matchId, target, publicMatch.actionSequence))} />{error && <p className="error-note" role="alert">{error}</p>}</main>;
 }
 

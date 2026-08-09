@@ -4,7 +4,7 @@ import { LocalGameGateway } from "../src/local-game";
 describe("local Robot match", () => {
   it.each([3, 4, 5, 6] as const)("creates fresh rolls with %i dice per side", async (diceCount) => {
     const gateway = new LocalGameGateway({
-      rolls: [[1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1]],
+      rolls: [Array.from({ length: diceCount }, (_, index) => (index + 1) as 1 | 2 | 3 | 4 | 5 | 6), Array.from({ length: diceCount }, (_, index) => (diceCount - index) as 1 | 2 | 3 | 4 | 5 | 6)],
     });
     const matchId = await gateway.createRobotMatch({
       mode: "robot", diceCount, gadgetsEnabled: false, difficulty: "easy",
@@ -54,5 +54,30 @@ describe("local Robot match", () => {
       "actionSequence", "activeSeat", "bid", "deadlines", "matchId", "mode",
       "players", "rematchAccepted", "round", "score", "settings", "startingSeat", "status",
     ]);
+  });
+
+  it("rejects queued rolls that do not exactly match the configured dice count", async () => {
+    const gateway = new LocalGameGateway({ rolls: [[1, 2, 3], [4, 5, 6, 1]] });
+    await expect(gateway.createRobotMatch({ mode: "robot", diceCount: 4, gadgetsEnabled: false, difficulty: "easy" }))
+      .rejects.toThrow("queued roll must contain exactly 4 dice");
+  });
+
+  it("removes a used private gadget from the authorized player projection", async () => {
+    const gateway = new LocalGameGateway({
+      rolls: [[1, 2, 3, 4], [5, 6, 1, 2]],
+      gadgets: [["echo", "jammer"]],
+    });
+    const id = await gateway.createRobotMatch({ mode: "robot", diceCount: 4, gadgetsEnabled: true, difficulty: "easy" });
+    await gateway.useGadget(id, 3, 0);
+    expect((await gateway.getPrivatePlayer(id)).gadget).toBeNull();
+  });
+
+  it("rejects scanner use until a current bid exists", async () => {
+    const gateway = new LocalGameGateway({
+      rolls: [[1, 2, 3, 4], [5, 6, 1, 2]],
+      gadgets: [["scanner", "echo"]],
+    });
+    const id = await gateway.createRobotMatch({ mode: "robot", diceCount: 4, gadgetsEnabled: true, difficulty: "easy" });
+    await expect(gateway.useGadget(id, 0, 0)).rejects.toThrow("scanner requires an opening bid");
   });
 });

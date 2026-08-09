@@ -36,6 +36,7 @@ type LocalRecord = {
 
 export type LocalGameOptions = Readonly<{
   rolls?: readonly (readonly DieFace[])[];
+  gadgets?: readonly (readonly [GadgetKind, GadgetKind])[];
   robotActions?: readonly RobotAction[];
 }>;
 
@@ -71,6 +72,7 @@ function isDieFace(value: number): value is DieFace {
 export class LocalGameGateway implements GameGateway {
   private readonly records = new Map<bigint, LocalRecord>();
   private readonly rolls: DieFace[][];
+  private readonly gadgets: [GadgetKind, GadgetKind][];
   private readonly robotActions: RobotAction[];
   private nextMatchId = BigInt(1);
 
@@ -79,6 +81,7 @@ export class LocalGameGateway implements GameGateway {
       if (!roll.every(isDieFace)) throw new RangeError("test rolls must contain die faces from 1 through 6");
       return [...roll];
     });
+    this.gadgets = (options.gadgets ?? []).map((pair) => [...pair] as [GadgetKind, GadgetKind]);
     this.robotActions = [...(options.robotActions ?? [])];
   }
 
@@ -123,7 +126,7 @@ export class LocalGameGateway implements GameGateway {
 
   async getPrivatePlayer(matchId: bigint): Promise<PrivatePlayerView> {
     const secret = this.record(matchId).secret;
-    return clonePrivate({ ownDice: secret.rolls[0], gadget: secret.gadget[0], scannerResult: secret.scannerResult[0] });
+    return clonePrivate({ ownDice: secret.rolls[0], gadget: secret.gadgetUsed[0] ? null : secret.gadget[0], scannerResult: secret.scannerResult[0] });
   }
 
   async getRoundResult(matchId: bigint): Promise<RoundResultView | null> {
@@ -264,14 +267,17 @@ export class LocalGameGateway implements GameGateway {
   private createSecret(settings: MatchSettings): LocalSecret {
     const rolls: [DieFace[], DieFace[]] = [this.nextRoll(settings.diceCount), this.nextRoll(settings.diceCount)];
     const gadgets = settings.gadgetsEnabled
-      ? [this.randomGadget(), this.randomGadget()] as [GadgetKind, GadgetKind]
+      ? this.gadgets.shift() ?? [this.randomGadget(), this.randomGadget()] as [GadgetKind, GadgetKind]
       : [null, null] as [null, null];
     return { rolls, gadget: gadgets, scannerResult: [null, null], gadgetUsed: [false, false], gadgetTarget: [null, null] };
   }
 
   private nextRoll(count: number): DieFace[] {
     const queued = this.rolls.shift();
-    if (queued) return queued.slice(0, count);
+    if (queued) {
+      if (queued.length !== count) throw new RangeError(`queued roll must contain exactly ${count} dice`);
+      return queued;
+    }
     const values = new Uint32Array(count);
     crypto.getRandomValues(values);
     return Array.from(values, (value) => ((value % 6) + 1) as DieFace);
