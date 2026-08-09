@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DEFAULT_DICE_COUNT, type Difficulty, type MatchSettings } from "@hecliar/game-logic";
 
 export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStart(settings: MatchSettings): void | Promise<void> }) {
@@ -8,12 +8,17 @@ export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStar
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [gadgetsEnabled, setGadgetsEnabled] = useState(false);
   const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
   return (
     <form className="hecliar-panel setup-panel" onSubmit={(event) => {
       event.preventDefault();
-      if (starting) return;
+      if (startingRef.current) return;
+      startingRef.current = true;
       setStarting(true);
-      Promise.resolve(onStart({ mode, diceCount, gadgetsEnabled, ...(mode === "robot" ? { difficulty } : {}) })).finally(() => setStarting(false));
+      Promise.resolve(onStart({ mode, diceCount, gadgetsEnabled, ...(mode === "robot" ? { difficulty } : {}) })).finally(() => {
+        startingRef.current = false;
+        setStarting(false);
+      });
     }}>
       <p className="eyebrow">Table settings</p>
       <h1>Set the table</h1>

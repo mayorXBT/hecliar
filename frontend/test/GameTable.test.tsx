@@ -54,4 +54,12 @@ describe("GameTable", () => {
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(screen.getByRole("region", { name: "Hecliar game table" })).toBeVisible();
   });
+
+  it("uses wrapping selectors and a dedicated reachable action region", () => {
+    render(<GameTable publicMatch={publicMatch} privatePlayer={{ ownDice: [5, 2, 1, 6], gadget: null, scannerResult: null }} onRaise={vi.fn()} onChallenge={vi.fn()} onUseGadget={vi.fn()} />);
+
+    expect(screen.getByRole("group", { name: "Quantity" })).toHaveClass("selector-grid");
+    expect(screen.getByRole("group", { name: "Face" })).toHaveClass("selector-grid");
+    expect(screen.getByRole("group", { name: "Table actions" })).toHaveClass("table-action-region");
+  });
 });
