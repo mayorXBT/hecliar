@@ -1,0 +1,16 @@
+{
+  "name": "hecliar",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["contracts", "frontend", "packages/game-logic"],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "contracts:compile": "npm --workspace contracts run compile",
+    "contracts:test": "npm --workspace contracts test",
+    "contracts:node": "npm --workspace contracts run node:up",
+    "contracts:node:down": "npm --workspace contracts run node:down"
+  },
+  "engines": { "node": ">=20.11.0" }
+}

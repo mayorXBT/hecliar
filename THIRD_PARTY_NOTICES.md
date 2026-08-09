@@ -14,3 +14,16 @@ stage.
 
 If implementation later adapts code or assets, this file must record the exact
 repository, source path, license, modifications, and required attribution.
+
+## Official Inco scaffold provenance
+
+`create-inco-app@0.4.0` generated the official EVM Hardhat + RainbowKit
+monorepo source used for this baseline on 2026-08-09. The copied generated
+paths are `contracts/**` and `frontend/**`; the current CLI placed its local
+node compose file at `contracts/docker-compose.yaml`, and this workspace also
+retains a root `docker-compose.yaml` copy for the declared workspace shape.
+
+The generated scaffold contains no top-level `LICENSE`, `NOTICE`, or `COPYING`
+file. Its `frontend/package.json` declares `MIT`; no scaffold source or assets
+were modified beyond the documented workspace integration, testing tooling,
+and required `1.0.2` Inco package/image pins.
