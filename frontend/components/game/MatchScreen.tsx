@@ -25,7 +25,20 @@ type AutomaticAttempt = {
 type ActionOutcome =
   | { state: "skipped" }
   | { state: "succeeded"; refreshedPublic: PublicMatchView | null }
-  | { state: "failed"; refreshedPublic: PublicMatchView | null };
+  | { state: "failed"; refreshedPublic: PublicMatchView | null; recoveryRequired: boolean };
+
+const partialRefreshMessage = "The current table state was found, but it could not be fully refreshed. Refresh before continuing.";
+
+class RefreshFailure extends Error {
+  constructor(
+    readonly publicMatch: PublicMatchView | null,
+    readonly failedReads: Array<"public" | "private" | "result">,
+    readonly reason: unknown,
+  ) {
+    super("Match refresh was incomplete.");
+    this.name = "RefreshFailure";
+  }
+}
 
 function parseMatchId(rawMatchId: string | string[] | undefined): bigint | null {
   if (typeof rawMatchId !== "string" || !/^[1-9]\d*$/.test(rawMatchId)) return null;
@@ -98,8 +111,35 @@ function MatchLifecycle({
     const resultRequest = gateway.getRoundResult(matchId).then((nextResult) => {
       setResultSnapshot({ matchKey: targetKey, value: nextResult });
     });
-    const [nextPublic] = await Promise.all([publicRequest, privateRequest, resultRequest]);
-    return nextPublic;
+    const [publicResult, privateResult, resultResult] = await Promise.allSettled([
+      publicRequest,
+      privateRequest,
+      resultRequest,
+    ]);
+    const failedReads: RefreshFailure["failedReads"] = [];
+    let reason: unknown;
+    if (publicResult.status === "rejected") {
+      failedReads.push("public");
+      reason = publicResult.reason;
+    }
+    if (privateResult.status === "rejected") {
+      failedReads.push("private");
+      reason ??= privateResult.reason;
+      setPrivateSnapshot(null);
+    }
+    if (resultResult.status === "rejected") {
+      failedReads.push("result");
+      reason ??= resultResult.reason;
+      setResultSnapshot(null);
+    }
+    if (failedReads.length > 0) {
+      throw new RefreshFailure(
+        publicResult.status === "fulfilled" ? publicResult.value : null,
+        failedReads,
+        reason,
+      );
+    }
+    return publicResult.status === "fulfilled" ? publicResult.value : null;
   }, [gateway, matchId, matchKey]);
 
   const refreshAfterError = useCallback(async () => {
@@ -110,9 +150,13 @@ function MatchLifecycle({
     try {
       await refresh(true);
       setRecovery(false);
-    } catch {
+    } catch (refreshError) {
       setRecovery(true);
-      setError("The table could not be refreshed. You can retry or start a new match.");
+      setError(
+        refreshError instanceof RefreshFailure && refreshError.publicMatch
+          ? partialRefreshMessage
+          : "The table could not be refreshed. You can retry or start a new match.",
+      );
     } finally {
       pendingRef.current = null;
       setPendingAction(null);
@@ -137,11 +181,25 @@ function MatchLifecycle({
           const refreshedPublic = await refresh(true);
           setRecovery(false);
           setError("That action did not go through. The table was refreshed and is ready to retry.");
-          return { state: "failed", refreshedPublic };
-        } catch {
+          return { state: "failed", refreshedPublic, recoveryRequired: false };
+        } catch (refreshError) {
+          const refreshedPublic = refreshError instanceof RefreshFailure
+            ? refreshError.publicMatch
+            : null;
+          if (
+            options.clearPrivate
+            || (
+              refreshError instanceof RefreshFailure
+              && refreshError.failedReads.includes("private")
+            )
+          ) {
+            setPrivateSnapshot(null);
+          }
           setRecovery(true);
-          setError("That action failed and the table could not be refreshed. Refresh before retrying.");
-          return { state: "failed", refreshedPublic: null };
+          setError(refreshedPublic
+            ? partialRefreshMessage
+            : "That action failed and the table could not be refreshed. Refresh before retrying.");
+          return { state: "failed", refreshedPublic, recoveryRequired: true };
         }
       }
       try {
@@ -153,10 +211,24 @@ function MatchLifecycle({
           const refreshedPublic = await refresh(true);
           setRecovery(false);
           return { state: "succeeded", refreshedPublic };
-        } catch {
+        } catch (refreshError) {
+          const refreshedPublic = refreshError instanceof RefreshFailure
+            ? refreshError.publicMatch
+            : null;
+          if (
+            options.clearPrivate
+            || (
+              refreshError instanceof RefreshFailure
+              && refreshError.failedReads.includes("private")
+            )
+          ) {
+            setPrivateSnapshot(null);
+          }
           setRecovery(true);
-          setError("That action failed and the table could not be refreshed. Refresh before retrying.");
-          return { state: "succeeded", refreshedPublic: null };
+          setError(refreshedPublic
+            ? partialRefreshMessage
+            : "That action failed and the table could not be refreshed. Refresh before retrying.");
+          return { state: "succeeded", refreshedPublic };
         }
       }
     } finally {
@@ -196,8 +268,10 @@ function MatchLifecycle({
         ...completed,
         state: "succeeded",
       });
-      setRecovery(false);
-      setError(null);
+      if (!outcome.recoveryRequired) {
+        setRecovery(false);
+        setError(null);
+      }
     } else if (outcome.state === "skipped") {
       automaticAttempts.current.set(attemptKey, {
         ...completed,
@@ -226,9 +300,13 @@ function MatchLifecycle({
   }, [runAction, setRecovery]);
 
   useEffect(() => {
-    void refresh(true).catch(() => {
+    void Promise.resolve().then(() => refresh(true)).catch((refreshError) => {
       setRecovery(true);
-      setError("This local match is no longer available. Refresh it or start a new match.");
+      setError(
+        refreshError instanceof RefreshFailure && refreshError.publicMatch
+          ? partialRefreshMessage
+          : "This local match is no longer available. Refresh it or start a new match.",
+      );
     });
   }, [gateway, matchId, refresh, setRecovery]);
 

@@ -322,6 +322,89 @@ describe("MatchScreen lifecycle", () => {
     expect(screen.queryByRole("link", { name: "Start a new match" })).not.toBeInTheDocument();
   });
 
+  it("preserves newer Robot progress when an ancillary result refresh fails", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const requestRobotAction = vi.fn(async () => {
+      currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      throw new Error("response lost after commit");
+    });
+    const testGateway = gateway({
+      getPublicMatch: vi.fn(async () => publicView(currentPublic)),
+      getRoundResult: vi.fn()
+        .mockResolvedValueOnce(null)
+        .mockRejectedValueOnce(new Error("result unavailable")),
+      requestRobotAction,
+    });
+    render(<MatchScreen gateway={testGateway} rawMatchId="1" />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "current table state was found, but it could not be fully refreshed",
+    );
+    expect(screen.getByRole("button", { name: "Refresh table" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Raise" })).toBeDisabled();
+    expect(screen.getByLabelText("Score you 0, robot 0")).toBeVisible();
+    expect(screen.queryByText(/ready to retry/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/could not continue after one retry/i)).not.toBeInTheDocument();
+  });
+
+  it("clears stale private state when a newer Robot refresh loses its private read", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const requestRobotAction = vi.fn(async () => {
+      currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      throw new Error("response lost after commit");
+    });
+    const testGateway = gateway({
+      getPublicMatch: vi.fn(async () => publicView(currentPublic)),
+      getPrivatePlayer: vi.fn()
+        .mockResolvedValueOnce(oldPrivate)
+        .mockRejectedValueOnce(new Error("private view unavailable")),
+      requestRobotAction,
+    });
+    render(<MatchScreen gateway={testGateway} rawMatchId="1" />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getAllByTestId("own-die")).toHaveLength(4);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByTestId("own-die")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Use echo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "current table state was found, but it could not be fully refreshed",
+    );
+    expect(screen.getByRole("button", { name: "Refresh table" })).toBeVisible();
+    expect(screen.queryByText(/could not continue after one retry/i)).not.toBeInTheDocument();
+  });
+
   it("retries the same Robot sequence after a transient automatic action failure", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
