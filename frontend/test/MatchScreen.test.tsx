@@ -89,6 +89,7 @@ describe("MatchScreen lifecycle", () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("does not synchronously parse a malformed match ID as BigInt", () => {
@@ -259,6 +260,65 @@ describe("MatchScreen lifecycle", () => {
 
     expect(screen.queryAllByTestId("own-die")).toHaveLength(0);
     expect(screen.getByText("Challenge verification pending")).toBeVisible();
+  });
+
+  it("automatically advances a Robot turn once and refreshes to the human turn", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const requestRobotAction = vi.fn(async () => {
+      currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+    });
+    const testGateway = gateway({
+      getPublicMatch: vi.fn(async () => publicView(currentPublic)),
+      requestRobotAction,
+    });
+    render(<MatchScreen gateway={testGateway} rawMatchId="1" />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText("Robot is thinking")).toBeVisible();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+  });
+
+  it("retries the same Robot sequence after a transient automatic action failure", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const requestRobotAction = vi.fn()
+      .mockRejectedValueOnce(new Error("temporary transport failure"))
+      .mockImplementationOnce(async () => {
+        currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      });
+    const testGateway = gateway({
+      getPublicMatch: vi.fn(async () => publicView(currentPublic)),
+      requestRobotAction,
+    });
+    render(<MatchScreen gateway={testGateway} rawMatchId="1" />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("ready to retry");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
   });
 
   it("does not show prior-match dice while a changed match ID is loading", async () => {

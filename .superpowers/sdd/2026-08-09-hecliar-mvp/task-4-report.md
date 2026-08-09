@@ -99,3 +99,40 @@ Added pending-state suppression in setup and bid/gadget controls: a start attemp
 | `git diff --check` | PASS — no whitespace errors |
 
 The frontend build retains the pre-existing typeless Tailwind config and missing WalletConnect project-ID warnings but exits 0. Chromium download/browser execution is the sole remaining external evidence gap.
+
+## Review-fix round 5
+
+### Status
+
+Fixed automatic-action retry deduplication in `MatchScreen`. Robot turns and challenge settlement still reserve their sequence key before the delay, preserving in-flight and duplicate suppression. Their shared automatic-action wrapper now removes that key only when the gateway action rejects, before `runAction` performs its authoritative refresh. A refreshed unchanged sequence can therefore schedule another attempt, while successful sequence keys remain deduplicated.
+
+### RED to GREEN evidence
+
+- RED: added focused tests for a successful automatic Robot turn and for a transient Robot action rejection followed by an unchanged authoritative refresh and retry. `npm --workspace frontend test -- MatchScreen.test.tsx` exited 1: 10 passed and the retry test failed because `requestRobotAction` was called once instead of twice, reproducing the stale-attempt-key defect.
+- During GREEN verification, the first gateway double returned the same public object identity on every refresh. Systematic tracing showed that this did not mirror `LocalGameGateway.getPublicMatch`, which returns a fresh clone. The double was corrected to return a fresh complete projection with the same sequence. This preserves the intended unchanged-authoritative-state scenario while exercising the real gateway boundary.
+- GREEN: the minimal shared wrapper rolls back the attempt key inside the rejected work callback, before recovery refresh updates state. `npm --workspace frontend test -- MatchScreen.test.tsx` then exited 0 with 11/11 tests.
+
+Robot and settlement do not have different attempt-deduplication control flow: each branch reserves a branch-specific key and timer, then invokes the same `runAutomaticAction` wrapper. The new success/failure/retry tests cover that shared wrapper through the Robot branch; the existing settlement test covers the settlement branch timer, invocation, private-dice clearing, and pending state. No separate settlement retry implementation exists to test independently.
+
+### Fresh verification
+
+| Command | Result |
+| --- | --- |
+| `npm --workspace frontend test -- MatchScreen.test.tsx` | PASS — 11 tests |
+| `npm --workspace frontend test` | PASS — 4 files, 18 tests |
+| `npm --workspace frontend run lint` | PASS |
+| `npx tsc --noEmit --incremental false -p frontend\tsconfig.json` | PASS |
+| `npm --workspace frontend run build` | PASS — compiled, type-checked, and generated all routes |
+| `git diff --check` | PASS |
+
+Game-logic code was not affected, so its conditional test/build checks were not rerun. The frontend production build retains the pre-existing typeless Tailwind config and missing WalletConnect project-ID warnings but exits 0. Per the round scope, the absent Playwright Chromium runtime was not downloaded or retried.
+
+### Self-review
+
+- Failed attempt keys are deleted before the authoritative refresh, ensuring that refresh can retrigger the unchanged sequence immediately.
+- Successful attempt keys are never deleted, so eventual-consistency refreshes cannot double-submit a completed Robot action or settlement.
+- The key remains reserved throughout each delay and in-flight request, retaining duplicate suppression.
+- Both automatic branches use the shared failure behavior; manual action, lifecycle, UI, and privacy paths are unchanged.
+- The focused retry test would fail if rollback were removed or moved until after the recovery refresh had already rendered the unchanged sequence.
+
+Status: **DONE_WITH_CONCERNS** only because real Playwright evidence remains unavailable without the separately tracked Chromium runtime.

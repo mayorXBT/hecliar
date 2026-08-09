@@ -130,6 +130,22 @@ function MatchLifecycle({
     }
   }, [refresh, setRecovery]);
 
+  const runAutomaticAction = useCallback(async (
+    attemptKey: string,
+    label: string,
+    work: () => Promise<void>,
+    options: { clearPrivate?: boolean; refreshPrivate?: boolean } = {},
+  ) => {
+    await runAction(label, async () => {
+      try {
+        await work();
+      } catch (error) {
+        automaticAttempts.current.delete(attemptKey);
+        throw error;
+      }
+    }, options);
+  }, [runAction]);
+
   useEffect(() => {
     void refresh(true).catch(() => {
       setRecovery(true);
@@ -148,7 +164,8 @@ function MatchLifecycle({
       if (automaticAttempts.current.has(attemptKey)) return;
       automaticAttempts.current.add(attemptKey);
       const timer = window.setTimeout(() => {
-        void runAction(
+        void runAutomaticAction(
+          attemptKey,
           "Challenge verification",
           () => gateway.settleChallenge(matchId, publicMatch.actionSequence),
           { clearPrivate: true, refreshPrivate: false },
@@ -162,11 +179,15 @@ function MatchLifecycle({
       automaticAttempts.current.add(attemptKey);
       const delay = 800 + Math.floor(Math.random() * 1001);
       const timer = window.setTimeout(() => {
-        void runAction("Robot", () => gateway.requestRobotAction(matchId, publicMatch.actionSequence));
+        void runAutomaticAction(
+          attemptKey,
+          "Robot",
+          () => gateway.requestRobotAction(matchId, publicMatch.actionSequence),
+        );
       }, delay);
       return () => window.clearTimeout(timer);
     }
-  }, [gateway, matchId, matchKey, publicMatch, recoveryRequired, runAction]);
+  }, [gateway, matchId, matchKey, publicMatch, recoveryRequired, runAutomaticAction]);
 
   if (!publicMatch) {
     return <main className="match-page">
