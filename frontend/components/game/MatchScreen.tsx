@@ -17,6 +17,11 @@ type Keyed<T> = {
   value: T;
 };
 
+type AutomaticAttempt = {
+  attempts: number;
+  state: "scheduled" | "in-flight" | "retryable" | "succeeded" | "exhausted";
+};
+
 function parseMatchId(rawMatchId: string | string[] | undefined): bigint | null {
   if (typeof rawMatchId !== "string" || !/^[1-9]\d*$/.test(rawMatchId)) return null;
   try {
@@ -30,15 +35,19 @@ function RecoveryNotice({
   message,
   onRefresh,
   refreshing,
+  allowRefresh,
 }: {
   message: string;
   onRefresh(): void;
   refreshing: boolean;
+  allowRefresh: boolean;
 }) {
   return <div className="recovery-note">
     <p className="error-note" role="alert">{message}</p>
     <div className="recovery-actions">
-      <button className="secondary-action" type="button" disabled={refreshing} onClick={onRefresh}>Refresh table</button>
+      {allowRefresh && (
+        <button className="secondary-action" type="button" disabled={refreshing} onClick={onRefresh}>Refresh table</button>
+      )}
       <Link className="secondary-action" href="/play/robot">Start a new match</Link>
     </div>
   </div>;
@@ -55,13 +64,15 @@ function MatchLifecycle({
 }) {
   const pendingRef = useRef<string | null>(null);
   const recoveryRequiredRef = useRef(false);
-  const automaticAttempts = useRef(new Set<string>());
+  const automaticAttempts = useRef(new Map<string, AutomaticAttempt>());
   const [publicSnapshot, setPublicSnapshot] = useState<Keyed<PublicMatchView> | null>(null);
   const [privateSnapshot, setPrivateSnapshot] = useState<Keyed<PrivatePlayerView> | null>(null);
   const [resultSnapshot, setResultSnapshot] = useState<Keyed<RoundResultView | null> | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const [automaticRevision, setAutomaticRevision] = useState(0);
+  const [automaticSafeExit, setAutomaticSafeExit] = useState(false);
 
   const setRecovery = useCallback((required: boolean) => {
     recoveryRequiredRef.current = required;
@@ -105,8 +116,8 @@ function MatchLifecycle({
     label: string,
     work: () => Promise<void>,
     options: { clearPrivate?: boolean; refreshPrivate?: boolean } = {},
-  ) => {
-    if (pendingRef.current || recoveryRequiredRef.current) return;
+  ): Promise<boolean> => {
+    if (pendingRef.current || recoveryRequiredRef.current) return false;
     pendingRef.current = label;
     setPendingAction(label);
     setError(null);
@@ -115,6 +126,7 @@ function MatchLifecycle({
       await work();
       await refresh(options.refreshPrivate ?? true);
       setRecovery(false);
+      return true;
     } catch {
       try {
         await refresh(true);
@@ -124,6 +136,7 @@ function MatchLifecycle({
         setRecovery(true);
         setError("That action failed and the table could not be refreshed. Refresh before retrying.");
       }
+      return false;
     } finally {
       pendingRef.current = null;
       setPendingAction(null);
@@ -136,15 +149,37 @@ function MatchLifecycle({
     work: () => Promise<void>,
     options: { clearPrivate?: boolean; refreshPrivate?: boolean } = {},
   ) => {
-    await runAction(label, async () => {
-      try {
-        await work();
-      } catch (error) {
-        automaticAttempts.current.delete(attemptKey);
-        throw error;
-      }
-    }, options);
-  }, [runAction]);
+    const scheduled = automaticAttempts.current.get(attemptKey);
+    if (!scheduled || scheduled.state !== "scheduled") return;
+    automaticAttempts.current.set(attemptKey, {
+      ...scheduled,
+      state: "in-flight",
+    });
+
+    const succeeded = await runAction(label, work, options);
+    const completed = automaticAttempts.current.get(attemptKey);
+    if (!completed) return;
+    if (succeeded) {
+      automaticAttempts.current.set(attemptKey, {
+        ...completed,
+        state: "succeeded",
+      });
+    } else if (completed.attempts < 2) {
+      automaticAttempts.current.set(attemptKey, {
+        ...completed,
+        state: "retryable",
+      });
+      setAutomaticRevision((revision) => revision + 1);
+    } else {
+      automaticAttempts.current.set(attemptKey, {
+        ...completed,
+        state: "exhausted",
+      });
+      setAutomaticSafeExit(true);
+      setRecovery(true);
+      setError(`${label} could not continue after one retry. Start a new match safely.`);
+    }
+  }, [runAction, setRecovery]);
 
   useEffect(() => {
     void refresh(true).catch(() => {
@@ -161,8 +196,14 @@ function MatchLifecycle({
     if (!publicMatch || recoveryRequired) return;
     if (publicMatch.status === "resolving-challenge") {
       const attemptKey = `${matchKey}:settle:${publicMatch.actionSequence}`;
-      if (automaticAttempts.current.has(attemptKey)) return;
-      automaticAttempts.current.add(attemptKey);
+      const prior = automaticAttempts.current.get(attemptKey);
+      if (prior && prior.state !== "retryable") return;
+      const attempts = prior?.attempts ?? 0;
+      if (attempts >= 2) return;
+      automaticAttempts.current.set(attemptKey, {
+        attempts: attempts + 1,
+        state: "scheduled",
+      });
       const timer = window.setTimeout(() => {
         void runAutomaticAction(
           attemptKey,
@@ -175,8 +216,14 @@ function MatchLifecycle({
     }
     if (publicMatch.status === "active-turn" && publicMatch.activeSeat === 1) {
       const attemptKey = `${matchKey}:robot:${publicMatch.actionSequence}`;
-      if (automaticAttempts.current.has(attemptKey)) return;
-      automaticAttempts.current.add(attemptKey);
+      const prior = automaticAttempts.current.get(attemptKey);
+      if (prior && prior.state !== "retryable") return;
+      const attempts = prior?.attempts ?? 0;
+      if (attempts >= 2) return;
+      automaticAttempts.current.set(attemptKey, {
+        attempts: attempts + 1,
+        state: "scheduled",
+      });
       const delay = 800 + Math.floor(Math.random() * 1001);
       const timer = window.setTimeout(() => {
         void runAutomaticAction(
@@ -187,17 +234,27 @@ function MatchLifecycle({
       }, delay);
       return () => window.clearTimeout(timer);
     }
-  }, [gateway, matchId, matchKey, publicMatch, recoveryRequired, runAutomaticAction]);
+  }, [automaticRevision, gateway, matchId, matchKey, publicMatch, recoveryRequired, runAutomaticAction]);
 
   if (!publicMatch) {
     return <main className="match-page">
       <p className="live-note" aria-live="polite">{pendingAction ? `${pendingAction} pending` : "Loading your private table\u2026"}</p>
-      {error && <RecoveryNotice message={error} onRefresh={() => void refreshAfterError()} refreshing={Boolean(pendingAction)} />}
+      {error && <RecoveryNotice
+        message={error}
+        onRefresh={() => void refreshAfterError()}
+        refreshing={Boolean(pendingAction)}
+        allowRefresh={!automaticSafeExit}
+      />}
     </main>;
   }
 
   const recovery = error
-    ? <RecoveryNotice message={error} onRefresh={() => void refreshAfterError()} refreshing={Boolean(pendingAction)} />
+    ? <RecoveryNotice
+      message={error}
+      onRefresh={() => void refreshAfterError()}
+      refreshing={Boolean(pendingAction)}
+      allowRefresh={!automaticSafeExit}
+    />
     : null;
 
   if (publicMatch.status === "match-complete" && result) {

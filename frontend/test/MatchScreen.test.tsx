@@ -321,6 +321,80 @@ describe("MatchScreen lifecycle", () => {
     expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
   });
 
+  it("retries a persistently failing Robot action once, then stops with a safe exit", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const requestRobotAction = vi.fn().mockRejectedValue(new Error("transport unavailable"));
+    render(<MatchScreen
+      gateway={gateway({
+        getPublicMatch: vi.fn(async () => publicView({ activeSeat: 1 })),
+        requestRobotAction,
+      })}
+      rawMatchId="1"
+    />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent("could not continue after one retry");
+    expect(screen.getByRole("link", { name: "Start a new match" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Refresh table" })).not.toBeInTheDocument();
+  });
+
+  it("retries a persistently failing settlement once, then stops without scoring", async () => {
+    vi.useFakeTimers();
+    const settleChallenge = vi.fn().mockRejectedValue(new Error("verification unavailable"));
+    render(<MatchScreen
+      gateway={gateway({
+        getPublicMatch: vi.fn(async () => publicView({
+          status: "resolving-challenge",
+          score: [0, 0],
+        })),
+        settleChallenge,
+      })}
+      rawMatchId="1"
+    />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(700);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(700);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7_000);
+    });
+
+    expect(settleChallenge).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent("could not continue after one retry");
+    expect(screen.getByLabelText("Score you 0, robot 0")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Refresh table" })).not.toBeInTheDocument();
+  });
+
   it("does not show prior-match dice while a changed match ID is loading", async () => {
     const secondPublic = deferred<PublicMatchView>();
     const secondPrivate = deferred<PrivatePlayerView>();
