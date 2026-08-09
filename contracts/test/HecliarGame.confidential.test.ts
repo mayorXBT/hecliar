@@ -5,6 +5,7 @@ import {
   createRobotFixture,
   decryptHandles,
   decryptOwnerRoll,
+  getTestLightning,
   nonZero,
 } from "./helpers/inco";
 
@@ -16,8 +17,15 @@ describe("HecliarGame confidential rounds", function () {
         gadgetsEnabled: false,
       });
 
-      expect(nonZero(fixture.humanHandles.dice)).to.have.length(diceCount);
-      expect(nonZero(fixture.robotHandles.dice)).to.have.length(diceCount);
+      for (const handles of [
+        fixture.humanHandles.dice,
+        fixture.robotHandles.dice,
+      ]) {
+        expect(handles.slice(0, diceCount).every((handle) => handle !== zeroHash))
+          .to.equal(true);
+        expect(handles.slice(diceCount).every((handle) => handle === zeroHash))
+          .to.equal(true);
+      }
     });
   }
 
@@ -37,16 +45,26 @@ describe("HecliarGame confidential rounds", function () {
     expect(disabled.robotHandles.gadget).to.equal(zeroHash);
   });
 
-  it("charges exactly one fee per random die and gadget operation", async function () {
+  it("matches the live Inco fee for every random die and gadget operation", async function () {
     const game = await hre.viem.deployContract("HecliarGame");
-    const threeDice = await game.read.requiredRoundFee([3, false]);
-    const sixDice = await game.read.requiredRoundFee([6, false]);
-    const fourDiceWithGadgets = await game.read.requiredRoundFee([4, true]);
-    const fourDiceWithoutGadgets = await game.read.requiredRoundFee([4, false]);
+    const publicClient = await hre.viem.getPublicClient();
+    const zap = await getTestLightning();
+    const liveIncoFee = await publicClient.readContract({
+      address: zap.executorAddress,
+      abi: [
+        {
+          type: "function",
+          name: "getFee",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ type: "uint256" }],
+        },
+      ] as const,
+      functionName: "getFee",
+    });
 
-    expect(sixDice).to.equal(threeDice * 2n);
-    expect(fourDiceWithGadgets - fourDiceWithoutGadgets).to.equal(
-      threeDice / 3n,
+    expect(await game.read.requiredRoundFee([4, true])).to.equal(
+      liveIncoFee * 10n,
     );
   });
 
@@ -140,6 +158,34 @@ describe("HecliarGame confidential rounds", function () {
         fixture.unrelated,
         nonZero(fixture.humanHandles.dice),
       ),
+    ).to.be.rejected;
+  });
+
+  it("allows each owner to decrypt only its own gadget assignment", async function () {
+    const fixture = await createRobotFixture({
+      diceCount: 4,
+      gadgetsEnabled: true,
+    });
+    const humanGadget = await decryptHandles(fixture.human, [
+      fixture.humanHandles.gadget,
+    ]);
+    const robotGadget = await decryptHandles(fixture.robot, [
+      fixture.robotHandles.gadget,
+    ]);
+
+    expect(Number(humanGadget[0].plaintext.value)).to.be.within(0, 2);
+    expect(Number(robotGadget[0].plaintext.value)).to.be.within(0, 2);
+    await expect(
+      decryptHandles(fixture.robot, [fixture.humanHandles.gadget]),
+    ).to.be.rejected;
+    await expect(
+      decryptHandles(fixture.human, [fixture.robotHandles.gadget]),
+    ).to.be.rejected;
+    await expect(
+      decryptHandles(fixture.unrelated, [fixture.humanHandles.gadget]),
+    ).to.be.rejected;
+    await expect(
+      decryptHandles(fixture.unrelated, [fixture.robotHandles.gadget]),
     ).to.be.rejected;
   });
 });

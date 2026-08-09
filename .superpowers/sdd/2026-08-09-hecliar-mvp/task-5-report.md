@@ -37,6 +37,8 @@ work around that environment boundary.
   slots and disabled gadget slots remain zero.
 - Added caller-derived and seat-explicit owner-scoped handle views. Opponent
   and unrelated callers are rejected before any handle tuple is returned.
+  These `msg.sender` checks are API/ergonomic guards; Inco's protocol ACL is
+  the cryptographic decryption boundary.
 - Added the authorized deterministic `HecliarGameHarness` seam. Production
   randomness remains unchanged.
 - Added shared Lightning test helpers using `Lightning.localNode("mainnet")`,
@@ -87,6 +89,21 @@ work around that environment boundary.
    require the real local Inco executor and covalidator and are preserved as
    the Docker gate below.
 
+### Controller review round 2
+
+- Replaced ratio-only fee assertions with a direct comparison against
+  `getFee()` on the live Inco executor address. A 4-dice gadget-enabled round
+  must equal exactly ten live fee units.
+- Strengthened every supported dice-count case to assert positional layout:
+  indexes `[0, diceCount)` are nonzero and every trailing fixed slot is zero.
+- Added a gadgets-enabled ACL lifecycle test for both seats: each owner
+  decrypts its own assignment in `0..2`, while the opponent and an unrelated
+  wallet must fail to decrypt each assignment. This test would reject either
+  wrong-seat `allow(opponent)` mutation.
+- These production-Inco assertions compile and are preserved in the Docker
+  suite, but cannot be run on this host because the executor/covalidator node
+  cannot be started.
+
 ### Attestation packing
 
 1. RED: the helper suite proved that inactive fixed zero slots incorrectly
@@ -132,7 +149,9 @@ show the upstream Inco EIP-1153 composability warning from
   handle.
 - **Fee funding:** exactly `2 * diceCount` die draws plus two gadget draws when
   enabled; `.add(1)` is a free operation over an existing handle. Both
-  underpayment and overpayment reject.
+  underpayment and overpayment reject. The integration test compares the
+  result to the live executor's `getFee()`, not a ratio derived from the
+  function under test.
 - **Encrypted branching:** no `if`, `require`, or revert consumes an `ebool`.
 - **Public projections:** `MatchPublic` contains no dice, gadget assignment,
   target, Scanner result, or plaintext secret.
@@ -141,6 +160,9 @@ show the upstream Inco EIP-1153 composability warning from
   `emit`, `reveal`, plaintext/debug logging, or secret-bearing log path.
 - **Views:** `getMyRoundHandles` derives the seat from `msg.sender`;
   `getRoundHandlesForSeat` verifies exact equality with that seat wallet.
+  These checks prevent accidental/wrong-seat API reads, but opaque handles can
+  still be observed in blockchain state and traces. The Inco ACL and
+  covalidator authorization—not the Solidity view check—prevent decryption.
 - **Terminology/trust:** implementation and documentation use Inco as
   TEE-based confidential compute, never FHE or zero knowledge.
 
@@ -168,14 +190,18 @@ Static searches confirmed:
   create exactly two seated wallet addresses.
 - Match IDs start at 1 and increase monotonically.
 - Inactive fixed-array slots remain zero.
+- For every supported dice count, the Docker-backed suite asserts that the
+  first `diceCount` positions are nonzero and all trailing positions are zero.
 - Disabled rounds generate no gadget handle.
 - Enabled rounds generate exactly one gadget assignment per side; target,
   Scanner, and gadget-effect implementation remains correctly deferred to
   Task 7.
 - No turn, challenge, settlement, gadget-action, recovery, or chain-gateway
   feature was preempted.
-- The contract performs no external value transfer. Underfunding and surplus
-  funding both revert before state mutation.
+- The game has no player payout or arbitrary external-value transfer. It does
+  forward the exact ETH fee to the Inco executor through each fee-charging
+  `randBounded` operation. Underfunding and surplus funding both revert before
+  state mutation.
 
 ## Independent Review
 
@@ -221,7 +247,7 @@ The equivalent non-duplicated command:
 npm --workspace contracts test -- --grep "confidential rounds"
 ```
 
-was executed after the review fixes and discovered all 11 production
+was executed after controller review round 2 and discovered all 12 production
 confidential tests, but every case stopped at `HH108: Cannot connect to the
 network anvil`. Therefore these remain mandatory before deployment:
 
@@ -240,7 +266,10 @@ Expected verified scope once Docker is available:
 - owner, opponent, and unrelated handle access boundaries;
 - real covalidator processing and owner decryption;
 - decrypted die bounds and active-handle uniqueness; and
-- exact surplus-funding rejection.
+- exact surplus-funding rejection;
+- exact live `inco.getFee()` arithmetic;
+- positional active/trailing dice slots; and
+- both gadget owners' `0..2` decrypt plus opponent/unrelated rejection.
 
 ## Files
 
