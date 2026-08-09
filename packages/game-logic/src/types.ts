@@ -1,6 +1,7 @@
 export type DieFace = 1 | 2 | 3 | 4 | 5 | 6;
 export type DiceCount = 3 | 4 | 5 | 6;
 export type Seat = 0 | 1;
+export type Mode = "robot" | "friend";
 export type Difficulty = "easy" | "medium" | "hard";
 export type MatchStatus =
   | "waiting-for-player"
@@ -27,20 +28,23 @@ export type MatchSettings = Readonly<{
   difficulty?: Difficulty;
 }>;
 
+export type Deadlines = Readonly<{
+  actionDeadline: number;
+  abandonmentDeadline: number;
+}>;
+
 export type PublicMatchView = Readonly<{
   matchId: bigint;
+  mode: Mode;
   status: MatchStatus;
   players: readonly [`0x${string}`, `0x${string}`];
   settings: MatchSettings;
   activeSeat: Seat;
-  startingSeat: Seat;
-  currentBid: Bid | null;
+  bid: Bid | null;
   score: readonly [number, number];
   round: number;
   actionSequence: number;
-  actionDeadline: number;
-  abandonmentDeadline: number;
-  rematchAccepted: readonly [boolean, boolean];
+  deadlines: Deadlines;
 }>;
 
 export type PrivatePlayerView = Readonly<{

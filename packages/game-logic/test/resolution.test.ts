@@ -34,6 +34,16 @@ describe("challenge resolution", () => {
     expect(result.effects).toEqual([{ owner: 0, kind: "echo", delta: 1 }]);
   });
 
+  it("does not add an Echo match when its selected die has another face", () => {
+    const result = resolveChallenge(
+      [[5, 2, 3], [4, 5, 6]],
+      { quantity: 3, face: 5, bidder: 0, sequence: 4 },
+      [{ owner: 0, kind: "echo", target: 1 }],
+    );
+    expect(result).toMatchObject({ baseCount: 2, effectiveCount: 2, winner: 1 });
+    expect(result.effects).toEqual([{ owner: 0, kind: "echo", delta: 0 }]);
+  });
+
   it("removes one effective opponent match only when a Jammer target matches the challenged face", () => {
     const result = resolveChallenge(
       [[5, 2, 3], [4, 5, 6]],
@@ -42,6 +52,16 @@ describe("challenge resolution", () => {
     );
     expect(result).toMatchObject({ baseCount: 2, effectiveCount: 1, winner: 1 });
     expect(result.effects).toEqual([{ owner: 0, kind: "jammer", delta: -1 }]);
+  });
+
+  it("does not remove a Jammer match when its selected opponent die has another face", () => {
+    const result = resolveChallenge(
+      [[5, 2, 3], [4, 5, 6]],
+      { quantity: 3, face: 5, bidder: 0, sequence: 4 },
+      [{ owner: 0, kind: "jammer", target: 0 }],
+    );
+    expect(result).toMatchObject({ baseCount: 2, effectiveCount: 2, winner: 1 });
+    expect(result.effects).toEqual([{ owner: 0, kind: "jammer", delta: 0 }]);
   });
 });
 
@@ -52,5 +72,13 @@ describe("best of three", () => {
 
   it("does not declare a match winner after the first round win", () => {
     expect(applyRoundWin([0, 1], 0)).toEqual({ score: [1, 1], matchWinner: null });
+  });
+
+  it("increments seat one's score without declaring a match winner for its first win", () => {
+    expect(applyRoundWin([1, 0], 1)).toEqual({ score: [1, 1], matchWinner: null });
+  });
+
+  it("declares seat one the match winner on its second win", () => {
+    expect(applyRoundWin([1, 1], 1)).toEqual({ score: [1, 2], matchWinner: 1 });
   });
 });
