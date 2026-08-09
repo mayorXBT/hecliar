@@ -51,7 +51,7 @@ for (const path of [
   "contracts/contracts/ConfidentialLottery.sol",
   "contracts/test/ConfidentialERC20.test.ts",
   "contracts/test/ConfidentialLottery.test.ts",
-  "contracts/ignition/modules/ConfidentialERC20.ts",
+  "contracts/ignition/modules/ConfidentialToken.ts",
   "contracts/ignition/modules/ConfidentialLottery.ts",
   "frontend/abi/confToken.json",
   "frontend/abi/confLottery.json",
