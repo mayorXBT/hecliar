@@ -40,17 +40,28 @@ export type PublicMatchView = Readonly<{
   players: readonly [`0x${string}`, `0x${string}`];
   settings: MatchSettings;
   activeSeat: Seat;
+  startingSeat?: Seat;
   bid: Bid | null;
   score: readonly [number, number];
   round: number;
   actionSequence: number;
   deadlines: Deadlines;
+  rematchAccepted?: readonly [boolean, boolean];
 }>;
 
 export type PrivatePlayerView = Readonly<{
   ownDice: readonly DieFace[];
   gadget: GadgetKind | null;
   scannerResult: boolean | null;
+}>;
+
+export type RoundResultView = Readonly<{
+  rolls: readonly [readonly DieFace[], readonly DieFace[]];
+  bid: Bid;
+  baseCount: number;
+  effectiveCount: number;
+  effects: readonly Readonly<{ owner: Seat; kind: Exclude<GadgetKind, "scanner">; delta: number }>[];
+  winner: Seat;
 }>;
 
 export interface GameGateway {
@@ -60,6 +71,7 @@ export interface GameGateway {
   setReady(matchId: bigint): Promise<void>;
   getPublicMatch(matchId: bigint): Promise<PublicMatchView>;
   getPrivatePlayer(matchId: bigint): Promise<PrivatePlayerView>;
+  getRoundResult(matchId: bigint): Promise<RoundResultView | null>;
   raise(matchId: bigint, bid: Omit<Bid, "bidder" | "sequence">, expectedSequence: number): Promise<void>;
   challenge(matchId: bigint, expectedSequence: number): Promise<void>;
   useGadget(matchId: bigint, target: number, expectedSequence: number): Promise<void>;

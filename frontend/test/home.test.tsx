@@ -2,11 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { expect, test } from "vitest";
 import Home from "@/app/page";
 
-test("renders the Hecliar baseline without generated example UI", () => {
+test("sends players to the Robot setup from the confidential table home", () => {
   render(<Home />);
 
-  expect(
-    screen.getByRole("heading", { name: "Hecliar confidential game baseline" }),
-  ).toBeInTheDocument();
-  expect(screen.queryByText(/generated game/i)).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Roll. Bluff. Don’t get caught." })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Play Robot" })).toHaveAttribute("href", "/play/robot");
 });

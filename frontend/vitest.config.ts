@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./test/setup.ts"],
+    exclude: ["e2e/**"],
     pool: "forks",
     poolOptions: { forks: { singleFork: true } },
   },

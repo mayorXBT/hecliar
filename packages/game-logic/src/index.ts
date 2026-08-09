@@ -3,3 +3,4 @@ export * from "./settings";
 export * from "./bids";
 export * from "./resolution";
 export * from "./robot";
+export * from "./local-game";
