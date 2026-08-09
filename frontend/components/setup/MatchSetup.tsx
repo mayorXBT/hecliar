@@ -3,14 +3,17 @@
 import { useState } from "react";
 import { DEFAULT_DICE_COUNT, type Difficulty, type MatchSettings } from "@hecliar/game-logic";
 
-export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStart(settings: MatchSettings): void }) {
+export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStart(settings: MatchSettings): void | Promise<void> }) {
   const [diceCount, setDiceCount] = useState<3 | 4 | 5 | 6>(DEFAULT_DICE_COUNT);
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [gadgetsEnabled, setGadgetsEnabled] = useState(false);
+  const [starting, setStarting] = useState(false);
   return (
     <form className="hecliar-panel setup-panel" onSubmit={(event) => {
       event.preventDefault();
-      onStart({ mode, diceCount, gadgetsEnabled, ...(mode === "robot" ? { difficulty } : {}) });
+      if (starting) return;
+      setStarting(true);
+      Promise.resolve(onStart({ mode, diceCount, gadgetsEnabled, ...(mode === "robot" ? { difficulty } : {}) })).finally(() => setStarting(false));
     }}>
       <p className="eyebrow">Table settings</p>
       <h1>Set the table</h1>
@@ -29,7 +32,7 @@ export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStar
       </fieldset>}
       <label className="toggle-label"><input type="checkbox" checked={gadgetsEnabled} onChange={(event) => setGadgetsEnabled(event.target.checked)} /> Enable secret gadgets</label>
       <p className="quiet-note">Local practice uses an in-memory game table. No wallet or transaction is needed.</p>
-      <button className="primary-action" type="submit">Start match</button>
+      <button className="primary-action" type="submit" disabled={starting} aria-busy={starting}>{starting ? "Starting match" : "Start match"}</button>
     </form>
   );
 }
