@@ -1,8 +1,8 @@
 # Hecliar MVP Design
 
-**Date:** 2026-08-09  
-**Status:** Approved design  
-**Product source:** `hecliar-prd.md`  
+**Date:** 2026-08-09
+**Status:** Approved design
+**Product source:** `hecliar-prd.md`
 **Target network:** Base Sepolia (chain ID 84532)
 
 ## 1. Purpose
@@ -710,4 +710,3 @@ The MVP is complete only when fresh evidence proves:
 - Unit, simulation, integration, browser, build, and confidentiality-audit commands pass from a clean checkout.
 - Critical and important code-review findings are resolved.
 - The application is responsive, accessible, polished, and configured for Base Sepolia.
-
