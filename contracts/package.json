@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test",
+    "test": "hardhat test --network anvil",
     "test:local": "hardhat test --network anvil",
     "test:testnet": "hardhat test --network baseSepolia",
     "deploy:local": "hardhat ignition deploy ignition/modules/ConfidentialLottery.ts --network anvil",

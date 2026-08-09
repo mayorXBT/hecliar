@@ -45,6 +45,10 @@
     "@testing-library/react": "16.3.0",
     "@testing-library/jest-dom": "6.6.4",
     "jsdom": "26.1.0",
-    "@playwright/test": "1.54.2"
+    "@playwright/test": "1.54.2",
+    "@x402/core": "2.21.0",
+    "@x402/evm": "2.21.0",
+    "@x402/extensions": "2.21.0",
+    "@x402/svm": "2.21.0"
   }
 }
