@@ -211,7 +211,8 @@ die.allow(player);
 
 Each stored handle is permanently allowed to the contract for future operations and only to its owning player for private decryption. Inactive array slots stay zero and are never exposed as usable handles.
 
-When gadgets are enabled:
+When gadgets are enabled, the contract generates exactly one assignment for
+each side at the start of every round:
 
 ```solidity
 euint256 kind = e.randBounded(3);
@@ -316,7 +317,8 @@ The encrypted boolean result is allowed only to the owner and the contract. It i
 
 ### 7.5 Gadget invariants
 
-- At most one assignment per side per enabled round.
+- Exactly one confidential assignment is generated for each side in every
+  enabled round; disabled rounds generate none.
 - At most one use per side per round.
 - Invalid or out-of-range targets revert without consuming the gadget.
 - Disabled rounds reject gadget use.
