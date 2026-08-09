@@ -9,9 +9,7 @@ const Header = () => {
       <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" />
-          <span className="text-sm font-medium text-foreground">
-            inco_lottery
-          </span>
+          <span className="text-sm font-medium text-foreground">HECLIAR</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -39,46 +37,36 @@ const Header = () => {
                     },
                   })}
                 >
-                  {(() => {
-                    if (!connected) {
-                      return (
-                        <button
-                          onClick={openConnectModal}
-                          className="px-4 py-2 text-sm border border-foreground/30 text-foreground hover:bg-foreground hover:text-background transition-colors"
-                        >
-                          connect wallet
-                        </button>
-                      );
-                    }
-
-                    if (chain.unsupported) {
-                      return (
-                        <button
-                          onClick={openChainModal}
-                          className="px-4 py-2 text-sm border border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
-                        >
-                          wrong network
-                        </button>
-                      );
-                    }
-
-                    return (
-                      <div className="flex items-center gap-3 text-sm">
-                        <button
-                          onClick={openChainModal}
-                          className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
-                        >
-                          {chain.name?.toLowerCase()}
-                        </button>
-                        <button
-                          onClick={openAccountModal}
-                          className="px-3 py-1.5 border border-foreground/30 text-foreground hover:border-foreground transition-colors"
-                        >
-                          {account.displayName}
-                        </button>
-                      </div>
-                    );
-                  })()}
+                  {!connected ? (
+                    <button
+                      onClick={openConnectModal}
+                      className="px-4 py-2 text-sm border border-foreground/30 text-foreground hover:bg-foreground hover:text-background transition-colors"
+                    >
+                      connect wallet
+                    </button>
+                  ) : chain.unsupported ? (
+                    <button
+                      onClick={openChainModal}
+                      className="px-4 py-2 text-sm border border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
+                    >
+                      wrong network
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-3 text-sm">
+                      <button
+                        onClick={openChainModal}
+                        className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+                      >
+                        {chain.name?.toLowerCase()}
+                      </button>
+                      <button
+                        onClick={openAccountModal}
+                        className="px-3 py-1.5 border border-foreground/30 text-foreground hover:border-foreground transition-colors"
+                      >
+                        {account.displayName}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             }}

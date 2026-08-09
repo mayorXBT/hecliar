@@ -1,8 +1,11 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import * as dotenv from "dotenv";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 
 dotenv.config(); // Load environment variables
+mkdirSync(join(__dirname, "artifacts"), { recursive: true });
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY_BASE_SEPOLIA || "";
 const PRIVATE_KEY_ANVIL = process.env.PRIVATE_KEY_ANVIL || "";
@@ -36,6 +39,7 @@ const config: HardhatUserConfig = {
     baseSepolia: {
       url: BASE_SEPOLIA_RPC_URL,
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 84532,
     },
     base: {
       url: BASE_RPC_URL,

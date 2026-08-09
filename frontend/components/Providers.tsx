@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useSyncExternalStore } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import {
@@ -18,7 +18,7 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
 const config = projectId
   ? getDefaultConfig({
-      appName: "inco confidential lottery",
+      appName: "Hecliar",
       projectId,
       chains: [activeChain],
       ssr: true,
@@ -34,11 +34,11 @@ const config = projectId
 // Inner provider that uses theme context
 const RainbowKitWithTheme = ({ children }: { children: ReactNode }) => {
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   const rainbowTheme =
     mounted && resolvedTheme === "light"

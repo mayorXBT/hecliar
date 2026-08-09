@@ -13,8 +13,8 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "web3 starter",
-  description: "ethereum dapp starter with solidity and next.js",
+  title: "Hecliar",
+  description: "Confidential Liar's Dice on Inco.",
 };
 
 export default function RootLayout({

@@ -5,14 +5,6 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test --network anvil",
-    "test:local": "hardhat test --network anvil",
-    "test:testnet": "hardhat test --network baseSepolia",
-    "deploy:local": "hardhat ignition deploy ignition/modules/ConfidentialLottery.ts --network anvil",
-    "deploy:testnet": "hardhat ignition deploy ignition/modules/ConfidentialLottery.ts --network baseSepolia",
-    "deploy:mainnet": "hardhat ignition deploy ignition/modules/ConfidentialLottery.ts --network base",
-    "deploy:token:local": "hardhat ignition deploy ignition/modules/ConfidentialToken.ts --network anvil",
-    "deploy:token:testnet": "hardhat ignition deploy ignition/modules/ConfidentialToken.ts --network baseSepolia",
-    "deploy:token:mainnet": "hardhat ignition deploy ignition/modules/ConfidentialToken.ts --network base",
     "node": "docker compose up",
     "node:up": "docker compose up -d",
     "node:down": "docker compose down"
