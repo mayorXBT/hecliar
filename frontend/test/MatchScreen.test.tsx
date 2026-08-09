@@ -288,6 +288,40 @@ describe("MatchScreen lifecycle", () => {
     expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
   });
 
+  it("accepts refreshed Robot progress after a stale transport failure", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const requestRobotAction = vi.fn(async () => {
+      currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      throw new Error("response lost after commit");
+    });
+    const testGateway = gateway({
+      getPublicMatch: vi.fn(async () => publicView(currentPublic)),
+      requestRobotAction,
+    });
+    render(<MatchScreen gateway={testGateway} rawMatchId="1" />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+    expect(screen.queryByText("Robot pending")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Start a new match" })).not.toBeInTheDocument();
+  });
+
   it("retries the same Robot sequence after a transient automatic action failure", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);
@@ -319,6 +353,114 @@ describe("MatchScreen lifecycle", () => {
 
     expect(requestRobotAction).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+  });
+
+  it("releases a scheduled Robot retry while an authoritative refresh is pending", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const pendingRefresh = deferred<PublicMatchView>();
+    const getPublicMatch = vi.fn()
+      .mockResolvedValueOnce(currentPublic)
+      .mockResolvedValueOnce(currentPublic)
+      .mockImplementationOnce(() => pendingRefresh.promise)
+      .mockImplementation(async () => currentPublic);
+    const requestRobotAction = vi.fn()
+      .mockRejectedValueOnce(new Error("temporary transport failure"))
+      .mockImplementationOnce(async () => {
+        currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      });
+    render(<MatchScreen
+      gateway={gateway({ getPublicMatch, requestRobotAction })}
+      rawMatchId="1"
+    />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("ready to retry");
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh table" }));
+    expect(screen.getByText("Refresh pending")).toBeVisible();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      pendingRefresh.resolve(currentPublic);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000);
+    });
+    expect(requestRobotAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not spend the Robot retry budget when its timer collides with Refresh", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    let currentPublic = publicView({ activeSeat: 1 });
+    const pendingRefresh = deferred<PublicMatchView>();
+    const getPublicMatch = vi.fn()
+      .mockResolvedValueOnce(currentPublic)
+      .mockResolvedValueOnce(currentPublic)
+      .mockImplementationOnce(() => pendingRefresh.promise)
+      .mockImplementation(async () => currentPublic);
+    const requestRobotAction = vi.fn()
+      .mockRejectedValueOnce(new Error("temporary transport failure"))
+      .mockImplementationOnce(async () => {
+        currentPublic = publicView({ activeSeat: 0, actionSequence: 4 });
+      });
+    render(<MatchScreen
+      gateway={gateway({ getPublicMatch, requestRobotAction })}
+      rawMatchId="1"
+    />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    const refresh = screen.getByRole("button", { name: "Refresh table" });
+    act(() => {
+      refresh.click();
+      vi.advanceTimersByTime(800);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Refresh pending")).toBeVisible();
+    await act(async () => {
+      pendingRefresh.resolve(currentPublic);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    expect(requestRobotAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Your turn — raise or challenge")).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("retries a persistently failing Robot action once, then stops with a safe exit", async () => {
@@ -355,6 +497,9 @@ describe("MatchScreen lifecycle", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("could not continue after one retry");
     expect(screen.getByRole("link", { name: "Start a new match" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Refresh table" })).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("own-die")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Use echo" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Score you 0, robot 0")).toBeVisible();
   });
 
   it("retries a persistently failing settlement once, then stops without scoring", async () => {
@@ -393,6 +538,8 @@ describe("MatchScreen lifecycle", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("could not continue after one retry");
     expect(screen.getByLabelText("Score you 0, robot 0")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Refresh table" })).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId("own-die")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Use echo" })).not.toBeInTheDocument();
   });
 
   it("does not show prior-match dice while a changed match ID is loading", async () => {
