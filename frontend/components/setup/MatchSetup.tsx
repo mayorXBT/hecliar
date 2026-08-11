@@ -10,7 +10,7 @@ export function MatchSetup({ mode, onStart }: { mode: "robot" | "friend"; onStar
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
   return (
-    <form className={`hecliar-panel setup-panel setup-panel--${mode}`} onSubmit={(event) => {
+    <form className="hecliar-panel setup-panel" onSubmit={(event) => {
       event.preventDefault();
       if (startingRef.current) return;
       startingRef.current = true;

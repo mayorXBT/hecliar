@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning lang="en">
-      <body suppressHydrationWarning className={`app-shell min-h-screen ${mono.variable}`}>
+      <body suppressHydrationWarning className={`min-h-screen bg-background font-mono ${mono.variable}`}>
         <Providers>
           <Header />
           {children}
