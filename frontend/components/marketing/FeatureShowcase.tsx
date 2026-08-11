@@ -12,7 +12,7 @@ type FeatureShowcaseProps = {
 
 export function FeatureShowcase({ id, eyebrow, title, copy, visual, reverse = false, tone = "default" }: FeatureShowcaseProps) {
   return (
-    <section id={id} data-marketing-reveal className={`marketing-feature marketing-feature--${tone}${reverse ? " marketing-feature--reverse" : ""}`}>
+    <section id={id} className={`marketing-feature marketing-feature--${tone}${reverse ? " marketing-feature--reverse" : ""}`}>
       <div className="marketing-feature__copy">
         <p className="marketing-kicker">{eyebrow}</p>
         <h2>{title}</h2>
