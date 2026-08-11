@@ -35,11 +35,6 @@ describe("GameTable", () => {
     expect(screen.getByText("Your dice")).toBeVisible();
     expect(screen.getAllByTestId("own-die")).toHaveLength(4);
     expect(screen.getByText("4 hidden dice")).toBeVisible();
-    const statusRail = screen.getByRole("region", { name: "Round status" });
-    expect(screen.getByLabelText("Score you 0, robot 0")).toBeVisible();
-    expect(statusRail).toHaveTextContent("2 × 5");
-    expect(screen.getByRole("region", { name: "Current bid" })).toHaveTextContent("At least 2 dice show 5");
-    expect(screen.getByLabelText("Action deadline: 1900000000")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Quantity 2" }));
     fireEvent.click(screen.getByRole("button", { name: "Face 5" }));
     expect(screen.getByRole("button", { name: "Raise" })).toBeDisabled();

@@ -15,10 +15,6 @@ export function GameTable({ publicMatch, privatePlayer, onRaise, onChallenge, on
         <strong>Robot</strong>
         <DiceTray visibility="hidden" count={publicMatch.settings.diceCount} />
       </div>
-      <div className="table-status-rail__bid" aria-label={`Current bid: ${bid ? `${bid.quantity} dice show ${bid.face}` : "open"}`}>
-        <p className="eyebrow">Current bid</p>
-        <strong>{bid ? `${bid.quantity} × ${bid.face}` : "Open"}</strong>
-      </div>
       <div className="table-status-rail__score" aria-label={`Score you ${publicMatch.score[0]}, robot ${publicMatch.score[1]}`}>
         <p className="eyebrow">Score</p>
         <div className="scoreline"><span>{publicMatch.score[0]}</span><i>:</i><span>{publicMatch.score[1]}</span></div>
@@ -26,7 +22,6 @@ export function GameTable({ publicMatch, privatePlayer, onRaise, onChallenge, on
       <div className="table-status-rail__turn">
         <p className="eyebrow">Turn status</p>
         <ActionStatus status={publicMatch.status} activeSeat={publicMatch.activeSeat} />
-        <span className="action-deadline" aria-label={`Action deadline: ${publicMatch.deadlines.actionDeadline}`}>Action deadline · {publicMatch.deadlines.actionDeadline}</span>
       </div>
     </section>
     <section className="table-surface bid-surface" aria-label="Current bid">
