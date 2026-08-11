@@ -1,76 +1,87 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 
 const Header = () => {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" />
-          <span className="text-sm font-medium text-foreground">HECLIAR</span>
-        </div>
+    <header className="site-header">
+      <div className="site-header__inner">
+        <Link className="site-header__brand" href="/" aria-label="Hecliar home">
+          <span aria-hidden="true" className="site-header__mark" />
+          <span>HECLIAR</span>
+        </Link>
 
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <ConnectButton.Custom>
-            {({
-              account,
-              chain,
-              openAccountModal,
-              openChainModal,
-              openConnectModal,
-              mounted,
-            }) => {
-              const ready = mounted;
-              const connected = ready && account && chain;
+        <nav className="site-header__nav" aria-label="Primary navigation">
+          <Link href="/">Home</Link>
+          <Link href="/#how-it-works">How it works</Link>
+          <Link href="/#privacy">Privacy</Link>
+          <Link href="/#rules">Rules</Link>
+        </nav>
 
-              return (
-                <div
-                  {...(!ready && {
-                    "aria-hidden": true,
-                    style: {
-                      opacity: 0,
-                      pointerEvents: "none",
-                      userSelect: "none",
-                    },
-                  })}
-                >
-                  {!connected ? (
-                    <button
-                      onClick={openConnectModal}
-                      className="px-4 py-2 text-sm border border-foreground/30 text-foreground hover:bg-foreground hover:text-background transition-colors"
-                    >
-                      connect wallet
-                    </button>
-                  ) : chain.unsupported ? (
-                    <button
-                      onClick={openChainModal}
-                      className="px-4 py-2 text-sm border border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
-                    >
-                      wrong network
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-3 text-sm">
+        <div className="site-header__actions">
+          <Link className="site-header__play" href="/play/robot">Play Robot</Link>
+          <span className="site-header__theme"><ThemeToggle /></span>
+          <div className="site-header__wallet">
+            <ConnectButton.Custom>
+              {({
+                account,
+                chain,
+                openAccountModal,
+                openChainModal,
+                openConnectModal,
+                mounted,
+              }) => {
+                const ready = mounted;
+                const connected = ready && account && chain;
+
+                return (
+                  <div
+                    {...(!ready && {
+                      "aria-hidden": true,
+                      style: {
+                        opacity: 0,
+                        pointerEvents: "none",
+                        userSelect: "none",
+                      },
+                    })}
+                  >
+                    {!connected ? (
+                      <button
+                        onClick={openConnectModal}
+                        className="site-header__wallet-button"
+                      >
+                        connect wallet
+                      </button>
+                    ) : chain.unsupported ? (
                       <button
                         onClick={openChainModal}
-                        className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+                        className="site-header__wallet-button site-header__wallet-button--danger"
                       >
-                        {chain.name?.toLowerCase()}
+                        wrong network
                       </button>
-                      <button
-                        onClick={openAccountModal}
-                        className="px-3 py-1.5 border border-foreground/30 text-foreground hover:border-foreground transition-colors"
-                      >
-                        {account.displayName}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            }}
-          </ConnectButton.Custom>
+                    ) : (
+                      <div className="site-header__wallet-connected">
+                        <button
+                          onClick={openChainModal}
+                          className="site-header__wallet-button site-header__wallet-button--quiet"
+                        >
+                          {chain.name?.toLowerCase()}
+                        </button>
+                        <button
+                          onClick={openAccountModal}
+                          className="site-header__wallet-button"
+                        >
+                          {account.displayName}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            </ConnectButton.Custom>
+          </div>
         </div>
       </div>
     </header>

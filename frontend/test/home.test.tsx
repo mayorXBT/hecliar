@@ -1,6 +1,25 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, expect, test, vi } from "vitest";
 import Home from "@/app/page";
+import { Header } from "@/components/Header";
+
+vi.mock("@rainbow-me/rainbowkit", () => ({
+  ConnectButton: {
+    Custom: ({ children }: { children: (props: Record<string, unknown>) => ReactNode }) => children({
+      account: null,
+      chain: null,
+      mounted: true,
+      openAccountModal: vi.fn(),
+      openChainModal: vi.fn(),
+      openConnectModal: vi.fn(),
+    }),
+  },
+}));
+
+vi.mock("@/components/ThemeToggle", () => ({
+  ThemeToggle: () => <button type="button">Theme</button>,
+}));
 
 afterEach(cleanup);
 
@@ -35,4 +54,15 @@ test("moves and activates confidentiality tabs with standard keyboard controls",
 
   fireEvent.keyDown(screen.getByRole("tab", { name: "Challenge" }), { key: "Home" });
   expect(screen.getByRole("tab", { name: "Private roll" })).toHaveAttribute("aria-selected", "true");
+});
+
+test("provides product navigation and preserves the wallet connection control", () => {
+  render(<Header />);
+
+  expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/#how-it-works");
+  expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/#privacy");
+  expect(screen.getByRole("link", { name: "Rules" })).toHaveAttribute("href", "/#rules");
+  expect(screen.getByRole("link", { name: "Play Robot" })).toHaveAttribute("href", "/play/robot");
+  expect(screen.getByRole("button", { name: /connect wallet/i })).toBeVisible();
 });
