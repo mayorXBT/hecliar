@@ -53,3 +53,30 @@ Browser inspection at the running Hecliar preview confirmed the approved hero lo
 - `frontend/hooks/usePublicMatch.ts` (`react-hooks/set-state-in-effect`)
 
 The Task 1 route and all new marketing components pass targeted ESLint. These unrelated errors were not modified.
+
+## Review fix round
+
+### Changes
+
+- Implemented roving tab behavior for the confidentiality demo. ArrowLeft, ArrowRight, Home, and End now activate and focus the appropriate tab; only the active tab remains in the normal tab order.
+- Replaced unsupported Reroll/Wildcard marketing copy with the implemented gadgets: Echo counts one selected own matching die twice, Jammer ignores one selected opponent matching die, and Scanner checks the current bid after an opening bid.
+- Added a small client-side Intersection Observer coordinator. Motion loops run only while their containing preview/marquee is visible; reveal animation is progressive, so content remains visible when JavaScript or Intersection Observer is unavailable. Reduced-motion overrides remain active.
+- Removed structural `overflow: clip` from `.marketing-page` and `.marketing-metric-grid`; clipping remains only on decorative route, product-preview, or marquee wrappers.
+- Replaced plain pseudocode strings with tokenized keyword, function, number, and comment spans.
+
+### Fix-round RED/GREEN evidence
+
+Added focused tests before the implementation changes. RED confirmed that the prior page lacked Echo/Jammer content and ArrowRight/Home/End tab activation. After implementation:
+
+```text
+npm --workspace frontend test -- home.test.tsx
+```
+
+Result: 1 test file passed, 2 tests passed.
+
+Also passed:
+
+```text
+npx eslint app/page.tsx components/marketing/*.tsx test/home.test.tsx  (from frontend)
+npx tsc --noEmit -p frontend/tsconfig.json
+```
