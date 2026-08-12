@@ -1,0 +1,454 @@
+/* ==========================================================================
+   Hecliar — shared primitives
+
+   Consumed by both the game table and the landing page. The landing page's
+   product demonstrations are these same components, so there is no second
+   set of mockup styles to keep in sync.
+
+   Prefix `hx-` marks a primitive, to keep it distinct from the page-level
+   classes in base.css that increment 3 retires.
+   ========================================================================== */
+
+/* --- die -----------------------------------------------------------------
+   A face die is an object resting on the table: bone body, dark pips, and a
+   real bottom edge. A sealed die is the table itself with a handle printed
+   on it — the same object, unreadable.                                     */
+
+.hx-die {
+  align-items: center;
+  border-radius: var(--radius-die);
+  display: inline-grid;
+  flex: none;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  justify-items: center;
+  place-content: center;
+  position: relative;
+}
+
+.hx-die--md {
+  height: clamp(2.75rem, 9vw, 3.5rem);
+  padding: clamp(0.4rem, 1.5vw, 0.55rem);
+  width: clamp(2.75rem, 9vw, 3.5rem);
+}
+
+.hx-die--sm {
+  height: 1.75rem;
+  padding: 0.28rem;
+  width: 1.75rem;
+}
+
+.hx-die--face,
+.hx-die--revealing {
+  background: var(--die-face);
+  box-shadow: var(--lift-3);
+}
+
+.hx-die--hidden,
+.hx-die--sealed {
+  background: var(--die-sealed-face);
+  border: 1px solid var(--die-sealed-line);
+  box-shadow: var(--lift-1);
+}
+
+.hx-pip {
+  align-self: center;
+  background: var(--die-pip);
+  border-radius: var(--radius-pill);
+  display: block;
+  height: 22%;
+  justify-self: center;
+  min-height: 4px;
+  min-width: 4px;
+  width: 22%;
+}
+
+.hx-die--sm .hx-pip {
+  height: 24%;
+  min-height: 3px;
+  min-width: 3px;
+  width: 24%;
+}
+
+/* An opponent die carries no information, so it carries no mark. */
+.hx-die-blank {
+  background: var(--die-sealed-line);
+  border-radius: var(--radius-pill);
+  grid-area: 2 / 2;
+  height: 0.4rem;
+  opacity: 0.55;
+  width: 0.4rem;
+}
+
+/* Your own die before the chain releases it. */
+.hx-die-seal {
+  color: var(--die-sealed-text);
+  font-family: var(--type-mono);
+  font-size: 0.6875rem;
+  grid-area: 1 / 1 / -1 / -1;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  place-self: center;
+  text-align: center;
+  width: 2ch;
+  word-break: break-all;
+}
+
+.hx-die--sm .hx-die-seal {
+  font-size: 0.5rem;
+}
+
+.hx-dice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Dice land rather than appear. This is the table's signature motion, so it
+   is the one place `--ease-snap` is used. */
+@media (prefers-reduced-motion: no-preference) {
+  .hx-dice-row .hx-die {
+    animation: hx-die-land var(--dur-slow) var(--ease-snap) backwards;
+    animation-delay: calc(var(--die-index, 0) * 50ms);
+  }
+}
+
+@keyframes hx-die-land {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-6deg) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- bid -----------------------------------------------------------------
+   The claimed face is shown as a die, not spelled as a numeral, so the bid
+   reads as the sentence a player said out loud.                           */
+
+.hx-bid {
+  align-items: center;
+  color: var(--text-primary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin: 0;
+}
+
+.hx-bid--body {
+  font-size: var(--text-sm);
+}
+
+.hx-bid--lead {
+  font-family: var(--type-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+}
+
+.hx-bid--empty {
+  color: var(--text-tertiary);
+}
+
+.hx-bid-qty {
+  font-family: var(--type-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hx-bid-face {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+/* --- status --------------------------------------------------------------
+   Every pip is followed by its own word, so colour reinforces the state
+   rather than carrying it.                                                */
+
+.hx-status {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.hx-status-pip {
+  border-radius: var(--radius-pill);
+  flex: none;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.hx-status--idle .hx-status-pip {
+  background: var(--line-strong);
+}
+
+.hx-status--pending .hx-status-pip {
+  background: hsl(var(--ember));
+}
+
+.hx-status--verified .hx-status-pip {
+  background: hsl(var(--verify));
+}
+
+.hx-status--failed .hx-status-pip {
+  background: hsl(var(--coral));
+}
+
+.hx-status--pending {
+  color: hsl(var(--ember));
+}
+
+.hx-status--verified {
+  color: hsl(var(--verify));
+}
+
+.hx-status--failed {
+  color: var(--text-danger);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hx-status--pending .hx-status-pip {
+    animation: hx-pulse 1.6s var(--ease-out) infinite;
+  }
+}
+
+@keyframes hx-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* --- surface -------------------------------------------------------------
+   Three elevations, used to say where to look.                            */
+
+.hx-surface {
+  border-radius: var(--radius-surface);
+  min-width: 0;
+}
+
+.hx-surface--1 {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+}
+
+.hx-surface--2 {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--lift-2);
+}
+
+.hx-surface--3 {
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--lift-2);
+}
+
+/* --- button --------------------------------------------------------------
+   `challenge` is the only coral fill in the product.                      */
+
+.hx-btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--type-ui);
+  font-weight: 600;
+  gap: var(--space-2);
+  justify-content: center;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.hx-btn--md {
+  font-size: var(--text-sm);
+  min-height: 44px;
+  padding: 0 var(--space-6);
+}
+
+.hx-btn--sm {
+  font-size: var(--text-xs);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+}
+
+.hx-btn--full {
+  width: 100%;
+}
+
+.hx-btn--primary {
+  background: var(--text-primary);
+  color: var(--surface-page);
+}
+
+.hx-btn--primary:hover:not(:disabled) {
+  background: hsl(var(--bone) / 0.88);
+}
+
+.hx-btn--secondary {
+  border-color: var(--line-strong);
+  color: var(--text-primary);
+}
+
+.hx-btn--secondary:hover:not(:disabled) {
+  background: var(--surface-inset);
+}
+
+.hx-btn--ghost {
+  color: var(--text-secondary);
+}
+
+.hx-btn--ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.hx-btn--challenge {
+  background: hsl(var(--coral));
+  color: hsl(var(--on-coral));
+  letter-spacing: 0.01em;
+}
+
+.hx-btn--challenge:hover:not(:disabled) {
+  background: hsl(var(--coral-hover));
+}
+
+.hx-btn:disabled,
+.hx-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* --- seal chip -----------------------------------------------------------
+   The artefact behind the confidentiality claim.                          */
+
+.hx-seal-chip {
+  align-items: center;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  display: inline-flex;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.hx-seal-chip-label {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.hx-seal-chip code {
+  color: var(--text-secondary);
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+}
+
+/* --- receipt -------------------------------------------------------------
+   The arithmetic the contract did, itemised.                              */
+
+.hx-receipt {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-4);
+}
+
+.hx-receipt-caption {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  margin: 0 0 var(--space-3);
+  text-transform: uppercase;
+}
+
+.hx-receipt-rows {
+  margin: 0;
+}
+
+.hx-receipt-row {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+}
+
+.hx-receipt-row dt {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.hx-receipt-row dd {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.hx-receipt-row--adjust dd {
+  color: hsl(var(--ember));
+}
+
+.hx-receipt-row--total {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.hx-receipt-row--total dt {
+  color: var(--text-primary);
+}
+
+.hx-receipt-row--total dd {
+  font-size: var(--text-lg);
+}
+
+.hx-receipt-verdict {
+  font-family: var(--type-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin: var(--space-3) 0 0;
+}
+
+.hx-receipt-verdict--held {
+  color: hsl(var(--verify));
+}
+
+.hx-receipt-verdict--caught {
+  color: var(--text-danger);
+}
+
+/* --- reveal --------------------------------------------------------------
+   One-shot scroll entry. Content that re-animates on every pass is what
+   makes a page feel like a template.                                      */
+
+.hx-reveal {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hx-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--dur-slow) var(--ease-out),
+                transform var(--dur-slow) var(--ease-out);
+    transition-delay: calc(var(--reveal-order, 0) * 60ms);
+  }
+
+  .hx-reveal.is-shown {
+    opacity: 1;
+    transform: none;
+  }
+}
