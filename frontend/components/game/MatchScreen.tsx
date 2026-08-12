@@ -2,6 +2,7 @@
 
 import type { GameGateway } from "@hecliar/game-logic";
 import { ButtonLink } from "@/components/ui/Button";
+import { useGatewayState } from "@/hooks/useGameGateway";
 import { MatchView } from "./MatchView";
 
 /**
@@ -39,15 +40,16 @@ export function MatchScreen({
   rawMatchId: string | string[] | undefined;
 }) {
   const matchId = parseMatchId(rawMatchId);
+  // Says which transport is missing and what to do about it, rather than
+  // blaming local play when the real problem is a disconnected wallet.
+  const { unavailable } = useGatewayState();
 
   if (matchId === null) {
     return <Blocked message="This is an invalid match link." />;
   }
 
   if (!gateway) {
-    return (
-      <Blocked message="Local play is unavailable. Start a new match with local transport enabled." />
-    );
+    return <Blocked message={unavailable ?? "No game transport is available."} />;
   }
 
   const matchKey = matchId.toString();
