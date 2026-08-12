@@ -95,7 +95,8 @@
 }
 
 .hx-die--sm .hx-die-seal {
-  font-size: 0.5rem;
+  font-size: 0.6875rem;
+  width: 2ch;
 }
 
 .hx-dice-row {
@@ -250,6 +251,10 @@
 /* --- button --------------------------------------------------------------
    `challenge` is the only coral fill in the product.                      */
 
+/* `color` is deliberately not transitioned. Chrome does not re-resolve a
+   transitioned `color` when the custom property behind it changes, so a
+   theme swap left elements holding the previous theme's text colour —
+   ink on felt at 1.06:1. Background and border carry the hover feedback. */
 .hx-btn {
   align-items: center;
   border: 1px solid transparent;
@@ -263,8 +268,7 @@
   line-height: 1;
   text-decoration: none;
   transition: background-color var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out),
-              color var(--dur-fast) var(--ease-out);
+              border-color var(--dur-fast) var(--ease-out);
   white-space: nowrap;
 }
 
@@ -285,12 +289,12 @@
 }
 
 .hx-btn--primary {
-  background: var(--text-primary);
-  color: var(--surface-page);
+  background: var(--btn-fill);
+  color: var(--btn-on-fill);
 }
 
 .hx-btn--primary:hover:not(:disabled) {
-  background: hsl(var(--bone) / 0.88);
+  background: var(--btn-fill-hover);
 }
 
 .hx-btn--secondary {

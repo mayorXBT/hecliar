@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <mask id="die">
+    <g fill="#fff" stroke="#fff" stroke-linejoin="round" stroke-width="3.5">
+      <path d="M30 11 L7 23 L7 43 L30 31 Z"/>
+      <path d="M34 11 L57 23 L57 43 L34 31 Z"/>
+      <path d="M32 37 L11 48 L32 59 L53 48 Z"/>
+    </g>
+    <g fill="#000" transform="matrix(23 -12 0 20 7 23)">
+      <ellipse cx="0.31" cy="0.2" rx="0.1" ry="0.1"/>
+      <ellipse cx="0.69" cy="0.2" rx="0.1" ry="0.1"/>
+      <ellipse cx="0.31" cy="0.5" rx="0.1" ry="0.1"/>
+      <ellipse cx="0.69" cy="0.5" rx="0.1" ry="0.1"/>
+      <ellipse cx="0.31" cy="0.8" rx="0.1" ry="0.1"/>
+      <ellipse cx="0.69" cy="0.8" rx="0.1" ry="0.1"/>
+    </g>
+    <g fill="#000" transform="matrix(23 12 0 20 34 11)">
+      <ellipse cx="0.5" cy="0.5" rx="0.12" ry="0.12"/>
+    </g>
+    <g fill="#000" transform="matrix(21 11 21 -11 11 48)">
+      <ellipse cx="0.3" cy="0.3" rx="0.09" ry="0.09"/>
+      <ellipse cx="0.72" cy="0.3" rx="0.09" ry="0.09"/>
+      <ellipse cx="0.3" cy="0.72" rx="0.09" ry="0.09"/>
+      <ellipse cx="0.72" cy="0.72" rx="0.09" ry="0.09"/>
+    </g>
+  </mask>
+
+  <rect width="64" height="64" rx="14" fill="#0B0E13"/>
+  <rect width="64" height="64" fill="#F2EDE3" mask="url(#die)"/>
+</svg>

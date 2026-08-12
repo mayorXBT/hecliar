@@ -3,6 +3,7 @@ import { HeroDemo } from "@/components/landing/HeroDemo";
 import { BidLine } from "@/components/ui/BidLine";
 import { ButtonLink } from "@/components/ui/Button";
 import { DiceRow } from "@/components/ui/Die";
+import { Logo } from "@/components/ui/Logo";
 import { Receipt } from "@/components/ui/Receipt";
 import { Reveal } from "@/components/ui/Reveal";
 import { SealChip } from "@/components/ui/SealChip";
@@ -423,7 +424,10 @@ export default function Home() {
 
       <footer className="site-foot">
         <div className="shell site-foot-bar">
-          <span>Hecliar · confidential liar&rsquo;s dice on Inco Lightning</span>
+          <span className="site-foot-brand">
+            <Logo size={18} />
+            Hecliar · confidential liar&rsquo;s dice on Inco Lightning
+          </span>
           <Link href="/play/robot">Play the robot</Link>
         </div>
       </footer>

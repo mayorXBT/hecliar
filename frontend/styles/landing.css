@@ -69,13 +69,11 @@
   text-decoration: none;
 }
 
-/* A die at rest. */
-.brand-mark {
-  background: var(--die-face);
-  border-radius: 5px;
-  box-shadow: 0 2px 0 hsl(var(--die-edge));
-  height: 16px;
-  width: 16px;
+/* The mark takes its colour from the brand link, so it inverts with the
+   theme without a second asset. */
+.hx-logo {
+  display: block;
+  flex: none;
 }
 
 .site-nav {
@@ -88,7 +86,7 @@
   color: var(--text-secondary);
   font-size: var(--text-xs);
   text-decoration: none;
-  transition: color var(--dur-fast) var(--ease-out);
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
 .site-nav a:hover {
@@ -690,6 +688,12 @@
 
 .site-foot-bar a {
   color: var(--text-secondary);
+}
+
+.site-foot-brand {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
 }
 
 /* --- mobile --------------------------------------------------------------

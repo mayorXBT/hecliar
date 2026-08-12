@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 /**
  * Scroll-entry reveal for the landing page. Deliberately not framer-motion:
@@ -11,8 +12,9 @@ import { clsx } from "clsx";
  * Reveals once and then disconnects — content that re-animates every time it
  * passes the fold is the thing that makes a page feel like a template.
  *
- * Under `prefers-reduced-motion` the content mounts already revealed and no
- * observer is created at all.
+ * Under reduced motion no observer is created and the content is shown
+ * outright. The stylesheet already skips the hidden state in that case, so
+ * this is belt and braces rather than the only guard.
  */
 export function Reveal({
   children,
@@ -27,25 +29,19 @@ export function Reveal({
   className?: string;
 }) {
   const ref = useRef<HTMLElement | null>(null);
-  const [shown, setShown] = useState(false);
+  const reduced = usePrefersReducedMotion();
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
+    if (reduced || typeof IntersectionObserver === "undefined") return;
     const node = ref.current;
     if (!node) return;
-
-    // jsdom implements neither of these; treat a missing API as "do not
-    // animate" rather than throwing.
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (reduced?.matches !== false || typeof IntersectionObserver === "undefined") {
-      setShown(true);
-      return;
-    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          setShown(true);
+          setEntered(true);
           observer.disconnect();
         }
       },
@@ -54,7 +50,9 @@ export function Reveal({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [reduced]);
+
+  const shown = entered || reduced;
 
   return (
     <Tag

@@ -57,7 +57,11 @@ const Providers = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    // disableTransitionOnChange is load-bearing, not cosmetic. Chrome does not
+    // re-resolve a transitioned property when the custom property behind it
+    // changes, so without this a theme swap leaves elements painted in the
+    // previous theme — the primary CTA came out at 1.04:1.
+    <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange enableSystem>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitWithTheme>{children}</RainbowKitWithTheme>

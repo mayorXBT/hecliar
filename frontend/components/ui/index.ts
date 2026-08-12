@@ -1,6 +1,7 @@
 export { BidLine } from "./BidLine";
 export { Button, ButtonLink, type ButtonVariant } from "./Button";
 export { Die, DiceRow, sealFragment, type DieState } from "./Die";
+export { Logo } from "./Logo";
 export { Receipt, type ReceiptRow } from "./Receipt";
 export { Reveal } from "./Reveal";
 export { SealChip } from "./SealChip";

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Logo } from "./ui/Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
@@ -16,7 +17,7 @@ const Header = () => {
     <header className="site-head">
       <div className="site-head-bar">
         <Link className="brand" href="/">
-          <span aria-hidden="true" className="brand-mark" />
+          <Logo size={22} />
           Hecliar
         </Link>
 

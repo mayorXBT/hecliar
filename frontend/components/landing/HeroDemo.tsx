@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import type { DieFace } from "@hecliar/game-logic";
 import { clsx } from "clsx";
 import { BidLine } from "@/components/ui/BidLine";
@@ -74,38 +75,35 @@ const SCRIPT: readonly Step[] = [
 const LAST = SCRIPT.length - 1;
 
 export function HeroDemo() {
+  const reduced = usePrefersReducedMotion();
   const [step, setStep] = useState(0);
-  const [reduced, setReduced] = useState(false);
+  const [driven, setDriven] = useState(false);
   const timer = useRef<number | null>(null);
 
-  useEffect(() => {
-    // jsdom does not implement matchMedia; a missing API means do not autoplay.
-    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (query?.matches !== false) {
-      setReduced(true);
-      setStep(LAST);
-    }
-  }, []);
+  // Reduced motion holds on the settled round rather than starting at the
+  // beginning and never moving, so the arithmetic is readable at rest.
+  const index = reduced && !driven ? LAST : step;
 
   useEffect(() => {
     if (reduced) return;
     timer.current = window.setTimeout(
       () => setStep((current) => (current + 1) % SCRIPT.length),
-      SCRIPT[step].hold,
+      SCRIPT[index].hold,
     );
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
-  }, [reduced, step]);
+  }, [reduced, index]);
 
   // Under reduced motion nothing advances on its own, so the control steps
   // through the round instead of restarting it.
   const replay = useCallback(() => {
     if (timer.current) window.clearTimeout(timer.current);
-    setStep((current) => (reduced ? (current + 1) % SCRIPT.length : 0));
-  }, [reduced]);
+    setDriven(true);
+    setStep((current) => (reduced ? ((current === 0 && !driven ? LAST : current) + 1) % SCRIPT.length : 0));
+  }, [driven, reduced]);
 
-  const current = SCRIPT[step];
+  const current = SCRIPT[index];
 
   return (
     <figure className="demo" aria-label="A scripted round of Hecliar">
@@ -161,8 +159,8 @@ export function HeroDemo() {
 
       <figcaption className="demo-foot">
         <span className="demo-progress" aria-hidden="true">
-          {SCRIPT.map((_, index) => (
-            <i className={clsx(index <= step && "is-done")} key={index} />
+          {SCRIPT.map((_, dot) => (
+            <i className={clsx(dot <= index && "is-done")} key={dot} />
           ))}
         </span>
         <button className="demo-replay" onClick={replay} type="button">

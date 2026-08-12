@@ -24,7 +24,10 @@
   /* --- palette: bone ---------------------------------------------------- */
   --bone: 40 37% 92%;        /* #F2EDE3  primary text, die face             */
   --bone-dim: 210 15% 71%;   /* #A9B4BF  secondary text                     */
-  --bone-mute: 210 11% 53%;  /* #7A8794  tertiary — 5.2:1 on felt-900, AA   */
+  /* Measured against felt-600, not the page: tertiary text mostly lives on
+     inset surfaces (card labels, sealed dice), which is the tighter case.
+     4.5:1 there, 5.9:1 on the page. */
+  --bone-mute: 211 11% 58%;  /* #8893A0  tertiary — 4.8:1 on felt-600, AA   */
 
   /* --- palette: signal --------------------------------------------------
      Accent discipline, stated precisely: a coral *fill* marks the
@@ -48,6 +51,14 @@
   --text-secondary: hsl(var(--bone-dim));
   --text-tertiary: hsl(var(--bone-mute));
   --text-danger: hsl(var(--coral-hover));   /* 6.4:1 on felt-900 */
+
+  /* The filled button states its colours literally per theme rather than
+     chaining through --text-primary -> --bone. Chrome failed to invalidate
+     the substituted `background` through that chain on a theme swap, leaving
+     the primary CTA painted in the previous theme at 1.04:1. */
+  --btn-fill: #F2EDE3;
+  --btn-fill-hover: #DCD6C9;
+  --btn-on-fill: #0B0E13;
 
   /* --- semantic lines --------------------------------------------------- */
   --line: hsl(var(--edge));
@@ -177,8 +188,12 @@
   --coral: 10 64% 40%;       /* #A63A25                                     */
   --coral-hover: 10 68% 34%; /* #92301B  hover deepens on paper             */
   --text-danger: hsl(var(--coral));   /* 5.8:1 on paper */
-  --ember: 40 64% 34%;       /* #8F6A1F                                     */
+  --ember: 40 64% 30%;       /* #7D5D1C  5.5:1 on paper, AA                 */
   --verify: 156 40% 31%;     /* #2F6E55                                     */
+
+  --btn-fill: #171512;
+  --btn-fill-hover: #33302A;
+  --btn-on-fill: #F4F1EA;
 
   --die-face: hsl(var(--felt-700));
   --die-pip: hsl(var(--bone));
