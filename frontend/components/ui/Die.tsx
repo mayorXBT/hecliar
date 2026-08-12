@@ -90,8 +90,10 @@ export function Die({
         role="img"
         style={style}
       >
+        {/* Two characters at sm: four would land at 8px, which reads as
+            smudge rather than as ciphertext. */}
         <span aria-hidden="true" className="hx-die-seal">
-          {sealFragment(seed)}
+          {size === "sm" ? sealFragment(seed).slice(0, 2) : sealFragment(seed)}
         </span>
       </span>
     );
