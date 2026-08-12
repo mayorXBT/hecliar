@@ -89,9 +89,15 @@ describe("HecliarGame rooms", function () {
 
   it("rejects admission after the room expires", async function () {
     const [, guest] = await hre.viem.getWalletClients();
+    const publicClient = await hre.viem.getPublicClient();
     const game = await hre.viem.deployContract("HecliarGame");
     const hash = roomHash("expired-room");
-    await game.write.createRoom([hash, 4, false, 10n]);
+    // Confirm before reading: hardhat-viem resolves a write on submission, so
+    // matchByRoomHash can return 0 here, making roomExpiry(0) return 0 and
+    // setNextBlockTimestamp(0) fail on the previous block's timestamp.
+    await publicClient.waitForTransactionReceipt({
+      hash: await game.write.createRoom([hash, 4, false, 10n]),
+    });
     const id = await game.read.matchByRoomHash([hash]);
     await time.setNextBlockTimestamp(await game.read.roomExpiry([id]));
 

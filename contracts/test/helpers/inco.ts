@@ -56,7 +56,11 @@ export async function createRobotFixture(options: {
   gadgetsEnabled: boolean;
 }) {
   const [human, robot, unrelated] = await hre.viem.getWalletClients();
-  const game = await hre.viem.deployContract("HecliarGameHarness");
+  const publicClient = await hre.viem.getPublicClient();
+  const game = withConfirmedWrites(
+    await hre.viem.deployContract("HecliarGameHarness"),
+    publicClient,
+  );
   await game.write.setTestIncoFee([0n]);
   const dicePreset = Array.from({ length: options.diceCount * 2 }, (_e, i) => BigInt(i + 1));
   const gadgetPreset = options.gadgetsEnabled ? [1n, 2n] : [];
@@ -65,7 +69,6 @@ export async function createRobotFixture(options: {
     options.diceCount,
     options.gadgetsEnabled,
   ]);
-  const publicClient = await hre.viem.getPublicClient();
   const startBlock = await publicClient.getBlockNumber();
   await game.write.createRobotMatch(
     [options.diceCount, options.gadgetsEnabled, robot.account.address],
@@ -110,6 +113,100 @@ async function whenRolled<T extends { dice: readonly Hex[] }>(
   }, "round handles");
 }
 
+/**
+ * Wrap a contract so every write waits to be mined, and so a reverted write
+ * throws instead of passing silently.
+ *
+ * hardhat-viem resolves a write as soon as the transaction is submitted. Every
+ * `await game.write.x(); await game.read.y()` pair in this suite was therefore
+ * a race, measured at 3 stale reads in 48 iterations. It surfaced as a
+ * different test failing on each run: a bid that never registered, a room id
+ * read as 0, StaleSequence(4, 3), and WrongStatus from getChallengeHandles
+ * because the challenge had not landed yet.
+ *
+ * Fixing it per call site meant a new symptom after each fix, so it is fixed
+ * once, here.
+ */
+export function withConfirmedWrites<T extends { write: Record<string, unknown> }>(
+  game: T,
+  publicClient: { waitForTransactionReceipt(args: { hash: Hex }): Promise<{ status: string }> },
+): T {
+  const confirmedWrite = new Proxy(game.write, {
+    get(target, property) {
+      const original = target[property as string];
+      if (typeof original !== "function") return original;
+      return async (...args: unknown[]) => {
+        const hash = (await (original as (...a: unknown[]) => Promise<unknown>)(...args)) as Hex;
+        if (typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash)) {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === "reverted") {
+            throw new Error(`Transaction ${hash} for ${String(property)} reverted`);
+          }
+        }
+        return hash;
+      };
+    },
+  });
+
+  return new Proxy(game, {
+    get(target, property) {
+      if (property === "write") return confirmedWrite;
+      return target[property as keyof T];
+    },
+  });
+}
+
+/**
+ * A fixture on the real HecliarGame rather than the harness.
+ *
+ * HecliarGameHarness overrides every confidential primitive: _randomDie
+ * returns a preset wrapped as a handle, _prepareChallenge returns a preset
+ * count, _verifyDecryption accepts a hardcoded hex"01" signature, and
+ * _grantStoredSecret is an empty body — so no ACL grant is ever issued. That
+ * makes it useful for exercising game rules deterministically, and useless
+ * for proving anything about confidentiality.
+ *
+ * This deploys the contract as shipped, so the dice come from e.randBounded,
+ * the grants are real allow() calls, and a decryption has to satisfy the
+ * covalidator. It is the only fixture whose results say anything about the
+ * privacy claim, and it is the same path the frontend has to drive.
+ */
+export async function createAttestedFixture(
+  options: { diceCount?: 3 | 4 | 5 | 6; gadgetsEnabled?: boolean } = {},
+) {
+  const diceCount = options.diceCount ?? 4;
+  const gadgetsEnabled = options.gadgetsEnabled ?? false;
+  const [human, robot, unrelated] = await hre.viem.getWalletClients();
+  const publicClient = await hre.viem.getPublicClient();
+  const game = withConfirmedWrites(
+    await hre.viem.deployContract("HecliarGame"),
+    publicClient,
+  );
+  const roundFee = await game.read.requiredRoundFee([diceCount, gadgetsEnabled]);
+  const startBlock = await publicClient.getBlockNumber();
+
+  await game.write.createRobotMatch(
+    [diceCount, gadgetsEnabled, robot.account.address],
+    { account: human.account, value: roundFee },
+  );
+
+  return {
+    game,
+    human,
+    robot,
+    unrelated,
+    roundFee,
+    startBlock,
+    publicClient,
+    humanHandles: await whenRolled(() =>
+      game.read.getMyRoundHandles([1n], { account: human.account }),
+    ),
+    robotHandles: await whenRolled(() =>
+      game.read.getMyRoundHandles([1n], { account: robot.account }),
+    ),
+  };
+}
+
 export const activeRobotFixture = (
   options: {
     diceCount?: 3 | 4 | 5 | 6;
@@ -121,7 +218,10 @@ export const activeRobotFixture = (
     gadgetsEnabled: options.gadgetsEnabled ?? false,
   });
 
-type RobotFixture = Awaited<ReturnType<typeof createRobotFixture>>;
+// Typed against the real contract, not the harness. The harness exposes a
+// superset of the methods, so a harness fixture is still assignable here,
+// while helpers stay usable from both the rule tests and the attested ones.
+type RobotFixture = Awaited<ReturnType<typeof createAttestedFixture>>;
 type TestLightning = Awaited<ReturnType<typeof getTestLightning>>;
 type LightningWalletClient = Parameters<TestLightning["attestedDecrypt"]>[0];
 
@@ -216,8 +316,8 @@ export function packByHandleOrder(
           .covalidatorSignatures.map((signature) => bytesToHex(signature));
 
   return {
-    dieValues: toFixed12(handles.dice.map(valueFor), "dieValues"),
-    dieSignatures: toFixed12(handles.dice.map(signaturesFor), "dieSignatures"),
+    dieValues: handles.dice.map(valueFor),
+    dieSignatures: handles.dice.map(signaturesFor),
     effectiveCount: valueFor(handles.effectiveCount),
     effectiveCountSignatures: signaturesFor(handles.effectiveCount),
     effectCodes: handles.effectCodes.map(valueFor),
@@ -226,10 +326,14 @@ export function packByHandleOrder(
 }
 
 /**
- * ChallengeSettlement declares uint256[12] and bytes[][12], so the settlement
- * has to be a fixed 12-tuple rather than an array. The runtime check keeps the
- * assertion honest: a short array would otherwise be encoded as a silently
- * wrong settlement.
+ * ChallengeSettlement declares uint256[12] and bytes[][12], so a settlement
+ * bound for the contract has to be a fixed 12-tuple rather than an array. The
+ * runtime check keeps the assertion honest: a short array would otherwise be
+ * encoded as a silently wrong settlement.
+ *
+ * Applied in revealAndPack rather than in packByHandleOrder, because the pack
+ * is a generic mapping helper that is also unit-tested with a handful of
+ * synthetic slots.
  */
 // Mutable on purpose: the tamper tests rewrite individual slots to prove the
 // contract rejects them. A mutable tuple still satisfies the ABI's readonly
@@ -355,7 +459,14 @@ export async function revealAndPack(
   // missing, which is exactly what an unobserved handle looks like, so the
   // pack has to be inside the retry rather than after it.
   return withCovalidatorRetry(
-    async () => packByHandleOrder(handles, await zap.attestedReveal(requested)),
+    async () => {
+      const packed = packByHandleOrder(handles, await zap.attestedReveal(requested));
+      return {
+        ...packed,
+        dieValues: toFixed12(packed.dieValues, "dieValues"),
+        dieSignatures: toFixed12(packed.dieSignatures, "dieSignatures"),
+      };
+    },
     `attestedReveal of ${requested.length} handle(s) for match ${matchId}`,
   );
 }
