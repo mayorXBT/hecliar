@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "compile": "hardhat compile",
-    "test": "npm run node:reset && hardhat test --network anvil",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run typecheck && npm run node:reset && hardhat test --network anvil",
     "test:fast": "hardhat test --network anvil",
     "test:pure": "hardhat test --network hardhat",
     "node": "docker compose up",

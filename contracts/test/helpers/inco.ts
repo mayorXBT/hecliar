@@ -216,13 +216,122 @@ export function packByHandleOrder(
           .covalidatorSignatures.map((signature) => bytesToHex(signature));
 
   return {
-    dieValues: handles.dice.map(valueFor),
-    dieSignatures: handles.dice.map(signaturesFor),
+    dieValues: toFixed12(handles.dice.map(valueFor), "dieValues"),
+    dieSignatures: toFixed12(handles.dice.map(signaturesFor), "dieSignatures"),
     effectiveCount: valueFor(handles.effectiveCount),
     effectiveCountSignatures: signaturesFor(handles.effectiveCount),
     effectCodes: handles.effectCodes.map(valueFor),
     effectCodeSignatures: handles.effectCodes.map(signaturesFor),
   };
+}
+
+/**
+ * ChallengeSettlement declares uint256[12] and bytes[][12], so the settlement
+ * has to be a fixed 12-tuple rather than an array. The runtime check keeps the
+ * assertion honest: a short array would otherwise be encoded as a silently
+ * wrong settlement.
+ */
+// Mutable on purpose: the tamper tests rewrite individual slots to prove the
+// contract rejects them. A mutable tuple still satisfies the ABI's readonly
+// parameter type.
+type Fixed12<T> = [T, T, T, T, T, T, T, T, T, T, T, T];
+
+function toFixed12<T>(values: readonly T[], label: string): Fixed12<T> {
+  if (values.length !== 12) {
+    throw new Error(`${label} must have 12 slots, received ${values.length}`);
+  }
+  return values as unknown as Fixed12<T>;
+}
+
+/**
+ * Drive a round to settlement with real attestations.
+ *
+ * The local helpers in the round tests force an outcome with
+ * setPresetEffectiveCounts. That is not available here because the count is
+ * computed by the covalidator, so the outcome is chosen by picking a bid the
+ * dice can or cannot support. Both hands are decrypted first — the test holds
+ * both wallets, and the contract still never lets one player read the other's.
+ *
+ * Assumes gadgets are off, so the effective count equals the base count.
+ */
+export async function settlePresetRound(
+  fixture: RobotFixture,
+  options: { winner: 0 | 1 },
+) {
+  const state = (await fixture.game.read.getPublicMatch([1n])) as {
+    activeSeat: number;
+    actionSequence: number;
+    diceCount: number;
+  };
+  const bidderSeat = Number(state.activeSeat) as 0 | 1;
+  const bidder = bidderSeat === 0 ? fixture.human : fixture.robot;
+  const challenger = bidderSeat === 0 ? fixture.robot : fixture.human;
+  const sequence = Number(state.actionSequence);
+
+  const mine = await decryptOwnerRoll(fixture, fixture.human);
+  const theirs = await decryptOwnerRoll(fixture, fixture.robot);
+  const face = mine[0];
+  const onTable = [...mine, ...theirs].filter((die) => die === face).length;
+
+  // Claiming no more than the table shows makes the bid hold, so the bidder
+  // wins. Claiming one more than it can show makes it fail, so the challenger
+  // wins.
+  const quantity = options.winner === bidderSeat ? onTable : onTable + 1;
+  const maxQuantity = Number(state.diceCount) * 2;
+  if (quantity < 1 || quantity > maxQuantity) {
+    throw new Error(
+      `Cannot force winner ${options.winner}: face ${face} appears ${onTable} ` +
+        `time(s), so the required bid of ${quantity} is outside 1..${maxQuantity}.`,
+    );
+  }
+
+  await fixture.game.write.raise([1n, quantity, face, sequence], {
+    account: bidder.account,
+  });
+  await fixture.game.write.challenge([1n, sequence + 1], {
+    account: challenger.account,
+  });
+  const settlement = await revealAndPack(fixture.game, 1n);
+  await fixture.game.write.settleChallenge([1n, settlement, sequence + 2], {
+    account: challenger.account,
+  });
+  return settlement;
+}
+
+/**
+ * Pay for the next round and wait until the new roll has actually landed.
+ *
+ * Waiting for handles that differ from the previous round's is what makes
+ * "generates fresh owner-only handles" deterministic: the covalidator produces
+ * the new dice asynchronously, so reading immediately can return the old ones.
+ */
+export async function fundAndStartNextRound(fixture: RobotFixture) {
+  const before = nonZero(fixture.humanHandles.dice).join(",");
+  const state = (await fixture.game.read.getPublicMatch([1n])) as {
+    actionSequence: number;
+    diceCount: number;
+    gadgetsEnabled: boolean;
+  };
+  const fee = await fixture.game.read.requiredRoundFee([
+    Number(state.diceCount) as 3 | 4 | 5 | 6,
+    Boolean(state.gadgetsEnabled),
+  ]);
+
+  await fixture.game.write.fundAndStartNextRound(
+    [1n, Number(state.actionSequence)],
+    { account: fixture.human.account, value: fee },
+  );
+
+  return withCovalidatorRetry(async () => {
+    const handles = await fixture.game.read.getMyRoundHandles([1n], {
+      account: fixture.human.account,
+    });
+    const after = nonZero(handles.dice);
+    if (after.length === 0 || after.join(",") === before) {
+      throw new Error("next round dice have not been rolled yet");
+    }
+    return handles;
+  }, "fresh round handles");
 }
 
 export async function revealAndPack(
