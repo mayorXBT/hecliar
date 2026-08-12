@@ -1,6 +1,52 @@
-import Link from "next/link";
 import type { Seat } from "@hecliar/game-logic";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { Surface } from "@/components/ui/Surface";
 
-export function MatchResult({ winner, score, onRematch, pendingAction = null }: { winner: Seat; score: readonly [number, number]; onRematch(): void; pendingAction?: string | null }) {
-  return <section className="hecliar-panel result-panel" aria-live="polite"><p className="eyebrow">Match result</p><h1>{winner === 0 ? "You took the table" : "The robot took the table"}</h1><p className="final-score"><span>{score[0]}</span> {"\u2014"} <span>{score[1]}</span></p><div className="action-row"><button className="primary-action" type="button" disabled={Boolean(pendingAction)} aria-busy={Boolean(pendingAction)} onClick={onRematch}>Play again</button><Link className="secondary-action" href="/">Home</Link></div>{pendingAction && <p className="live-note">{pendingAction} pending</p>}</section>;
+export function MatchResult({
+  winner,
+  score,
+  onRematch,
+  pendingAction = null,
+}: {
+  winner: Seat;
+  score: readonly [number, number];
+  onRematch(): void;
+  pendingAction?: string | null;
+}) {
+  const won = winner === 0;
+
+  return (
+    <Surface aria-live="polite" className="result-panel result-panel--match" level={3}>
+      <p className="eyebrow">Match complete</p>
+      <h1>{won ? "You took the table" : "The robot took the table"}</h1>
+
+      <p aria-label={`Final score you ${score[0]}, robot ${score[1]}`} className="final-score">
+        <span>{score[0]}</span>
+        <i aria-hidden="true">:</i>
+        <span>{score[1]}</span>
+      </p>
+
+      <p className="result-lead">
+        {won
+          ? "Neither hand was readable until the challenge that ended it."
+          : "The robot read the odds, not your dice."}
+      </p>
+
+      <div className="action-row">
+        <Button
+          aria-busy={Boolean(pendingAction)}
+          disabled={Boolean(pendingAction)}
+          onClick={onRematch}
+          variant="primary"
+        >
+          Play again
+        </Button>
+        <ButtonLink href="/" variant="secondary">
+          Home
+        </ButtonLink>
+      </div>
+
+      {pendingAction && <p className="live-note">{pendingAction} pending</p>}
+    </Surface>
+  );
 }

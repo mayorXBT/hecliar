@@ -1,0 +1,329 @@
+/* ==========================================================================
+   Hecliar — the table
+
+   Three zones with three weights. The bid owns the stage because it is the
+   one fact that decides your turn; the opponent is deliberately quiet; your
+   hand is where you act.
+   ========================================================================== */
+
+.game-table {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 auto;
+  max-width: 52rem;
+}
+
+.game-table > .hx-surface {
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+}
+
+/* --- opponent ------------------------------------------------------------ */
+
+.opponent-surface {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: auto 1fr auto;
+}
+
+.opponent-id strong {
+  color: var(--text-primary);
+  display: block;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.scoreline {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.scoreline i {
+  color: var(--text-tertiary);
+  font-style: normal;
+  margin: 0 var(--space-1);
+}
+
+/* --- bid -----------------------------------------------------------------
+   The only place on the table that uses display type at full size.        */
+
+.bid-surface-head {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.bid-headline {
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.bid-headline .hx-bid--lead {
+  font-size: var(--text-2xl);
+}
+
+.hx-timer {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.hx-timer.is-low {
+  color: hsl(var(--ember));
+}
+
+/* --- hand ---------------------------------------------------------------- */
+
+.hand-heading {
+  align-items: start;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.hand-heading h2 {
+  color: var(--text-primary);
+  font-family: var(--type-ui);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: var(--space-1) 0 0;
+}
+
+/* --- bidding -------------------------------------------------------------
+   Quick chips first, because they are the path most turns take.           */
+
+.bid-controls {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.bid-quick {
+  margin-bottom: var(--space-6);
+}
+
+.bid-quick-label {
+  color: var(--text-tertiary);
+  display: block;
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+.bid-quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bid-quick-chip {
+  align-items: center;
+  background: var(--surface-inset);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
+}
+
+.bid-quick-chip:hover:not(:disabled) {
+  border-color: var(--text-primary);
+}
+
+.bid-quick-chip.is-selected {
+  background: var(--surface-raised);
+  border-color: var(--text-primary);
+}
+
+.bid-quick-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.bid-quick-qty {
+  font-family: var(--type-mono);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.bid-picker + .bid-picker {
+  margin-top: var(--space-4);
+}
+
+.selector-grid {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.selector-grid button {
+  flex: 1 0 2.75rem;
+  min-width: 2.75rem;
+}
+
+/* Faces read as dice, so the button is a frame around one. */
+.face-grid button {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.face-grid button[aria-pressed="true"] {
+  background: var(--surface-raised);
+  border-color: var(--text-primary);
+}
+
+/* Reachable but not recommended: this face cannot beat the standing bid at
+   the chosen quantity. It stays selectable, and .bid-hint says why. */
+.face-grid button.is-unreachable {
+  opacity: 0.42;
+}
+
+.bid-hint {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  margin: var(--space-4) 0 0;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.action-row .raise-action {
+  flex: 1;
+}
+
+/* --- results ------------------------------------------------------------- */
+
+.result-panel {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+}
+
+.result-panel h1,
+.result-panel h2 {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.result-lead {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6);
+  max-width: var(--w-prose);
+}
+
+.result-score {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  margin: var(--space-6) 0;
+}
+
+.result-score strong {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.final-score {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-3xl);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 var(--space-6);
+}
+
+.final-score i {
+  color: var(--text-tertiary);
+  font-style: normal;
+  margin: 0 var(--space-2);
+}
+
+.reveal-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 var(--space-6);
+}
+
+.reveal-grid > div {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+}
+
+.reveal-grid > div > span {
+  color: var(--text-tertiary);
+  display: block;
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+}
+
+/* --- mobile --------------------------------------------------------------
+   Sticky opponent strip, scrolling middle, pinned action dock. Your dice
+   and the action you take on them stay on screen together.                */
+
+@media (max-width: 767px) {
+  .game-table {
+    gap: var(--space-2);
+  }
+
+  .opponent-surface {
+    grid-template-columns: 1fr auto;
+    position: sticky;
+    top: var(--space-2);
+    z-index: 10;
+  }
+
+  .opponent-surface .hx-dice-row {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .hand-surface {
+    padding-bottom: 9rem;
+  }
+
+  .reveal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-action-region {
+    backdrop-filter: blur(16px);
+    background: hsl(var(--felt-900) / 0.94);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-surface);
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    box-shadow: var(--lift-2);
+    left: var(--gutter);
+    margin: 0;
+    padding: var(--space-3);
+    position: fixed;
+    right: var(--gutter);
+    z-index: 20;
+  }
+}

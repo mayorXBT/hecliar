@@ -72,7 +72,7 @@ export function Die({
       <span
         aria-label={label ?? "Hidden die"}
         className={className}
-        data-testid={testId ?? "hidden-die"}
+        data-testid={testId}
         role="img"
         style={style}
       >
@@ -86,7 +86,7 @@ export function Die({
       <span
         aria-label={label ?? "Sealed die, value hidden until the reveal"}
         className={className}
-        data-testid={testId ?? "sealed-die"}
+        data-testid={testId}
         role="img"
         style={style}
       >
@@ -103,7 +103,7 @@ export function Die({
     <span
       aria-label={label ?? `Die showing ${face}`}
       className={className}
-      data-testid={testId ?? "own-die"}
+      data-testid={testId}
       role="img"
       style={style}
     >
