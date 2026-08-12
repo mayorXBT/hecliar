@@ -16,9 +16,14 @@ try {
   process.exit(1);
 }
 
-const address = deployment["HecliarGame#HecliarGame"];
+// Ignition keys entries as "<ModuleName>#<ContractName>", so the module can be
+// renamed without this script silently finding nothing. Match on the contract
+// half rather than hardcoding the module name.
+const entry = Object.entries(deployment).find(([key]) => key.endsWith("#HecliarGame"));
+const address = entry?.[1];
 if (!address || !isAddress(address)) {
-  console.error("Deployment file does not contain a valid HecliarGame address");
+  console.error("Deployment file does not contain a valid HecliarGame address.");
+  console.error("Keys present:", Object.keys(deployment).join(", ") || "(none)");
   process.exit(1);
 }
 
