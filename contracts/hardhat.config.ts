@@ -9,6 +9,10 @@ mkdirSync(join(__dirname, "artifacts"), { recursive: true });
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY_BASE_SEPOLIA || "";
 const PRIVATE_KEY_ANVIL = process.env.PRIVATE_KEY_ANVIL || "";
+// The local suites need three signers — human, robot, and an unrelated third
+// wallet used to prove a stranger cannot join or read. A single key leaves
+// getWalletClients() one element long and the fixtures fail on `undefined`.
+const SEED_PHRASE = process.env.SEED_PHRASE || "";
 // No fallback to the Sepolia key — mainnet must use its own key, otherwise the `base`
 // network has no signer and Hardhat fails clearly (prevents accidental mainnet deploys).
 const PRIVATE_KEY_BASE = process.env.PRIVATE_KEY_BASE || "";
@@ -36,7 +40,11 @@ const config: HardhatUserConfig = {
     // Make sure to run `docker compose up` to start the local node and covalidator
     anvil: {
       url: "http://localhost:8545",
-      accounts: PRIVATE_KEY_ANVIL ? [PRIVATE_KEY_ANVIL] : [],
+      accounts: SEED_PHRASE
+        ? { mnemonic: SEED_PHRASE, count: 10 }
+        : PRIVATE_KEY_ANVIL
+          ? [PRIVATE_KEY_ANVIL]
+          : [],
       chainId:31337
     },
     baseSepolia: {
