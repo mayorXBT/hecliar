@@ -1,4 +1,4 @@
-import { Lightning } from "@inco/lightning-js/lite";
+﻿import { Lightning } from "@inco/lightning-js/lite";
 import {
   bytesToHex,
   zeroHash,
@@ -11,12 +11,56 @@ export const nonZero = (handles: readonly Hex[]) =>
 
 export const getTestLightning = () => Lightning.localNode("mainnet");
 
+/**
+ * The covalidator is an observer, not a synchronous service. It polls the
+ * chain once a second ("Observed blocks" in its log) and can only attest to a
+ * handle once it has seen the block that created it.
+ *
+ * A test that writes handles and immediately decrypts them is therefore
+ * racing that poll. On a cold node the observer is still catching up and the
+ * race is lost more often, which is why the suite scored differently on a
+ * fresh node than on a warm one and why re-running changed the result.
+ *
+ * This converts that race into a bounded wait. It does not paper over real
+ * failures: a wrong value or a genuinely missing attestation still fails,
+ * just after the retries are exhausted rather than before the observer had a
+ * chance.
+ */
+const COVALIDATOR_ATTEMPTS = 12;
+const COVALIDATOR_DELAY_MS = 750;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function withCovalidatorRetry<T>(
+  operation: () => Promise<T>,
+  label: string,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= COVALIDATOR_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < COVALIDATOR_ATTEMPTS) await sleep(COVALIDATOR_DELAY_MS);
+    }
+  }
+  throw new Error(
+    `${label} did not succeed after ${COVALIDATOR_ATTEMPTS} attempts over ` +
+      `${(COVALIDATOR_ATTEMPTS * COVALIDATOR_DELAY_MS) / 1000}s. ` +
+      `Last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
+}
+
 export async function createRobotFixture(options: {
   diceCount: 3 | 4 | 5 | 6;
   gadgetsEnabled: boolean;
 }) {
   const [human, robot, unrelated] = await hre.viem.getWalletClients();
-  const game = await hre.viem.deployContract("HecliarGame");
+  const game = await hre.viem.deployContract("HecliarGameHarness");
+  await game.write.setTestIncoFee([0n]);
+  const dicePreset = Array.from({ length: options.diceCount * 2 }, (_e, i) => BigInt(i + 1));
+  const gadgetPreset = options.gadgetsEnabled ? [1n, 2n] : [];
+  await game.write.setPresetSecrets([dicePreset, gadgetPreset]);
   const roundFee = await game.read.requiredRoundFee([
     options.diceCount,
     options.gadgetsEnabled,
@@ -36,13 +80,34 @@ export async function createRobotFixture(options: {
     roundFee,
     startBlock,
     publicClient,
-    humanHandles: await game.read.getMyRoundHandles([1n], {
-      account: human.account,
-    }),
-    robotHandles: await game.read.getMyRoundHandles([1n], {
-      account: robot.account,
-    }),
+    humanHandles: await whenRolled(() =>
+      game.read.getMyRoundHandles([1n], { account: human.account }),
+    ),
+    robotHandles: await whenRolled(() =>
+      game.read.getMyRoundHandles([1n], { account: robot.account }),
+    ),
   };
+}
+
+/**
+ * Confidential dice are not ready the instant createRobotMatch returns. The
+ * contract requests randomness, and the covalidator computes it only after it
+ * has observed the block. Reading the handles immediately races that compute
+ * and yields zero handles or a revert.
+ *
+ * Waiting for a non-zero roll is what makes the suite repeatable — without it
+ * the same test scored differently depending on how warm the node was.
+ */
+async function whenRolled<T extends { dice: readonly Hex[] }>(
+  read: () => Promise<T>,
+): Promise<T> {
+  return withCovalidatorRetry(async () => {
+    const handles = await read();
+    if (nonZero(handles.dice).length === 0) {
+      throw new Error("round handles are still all zero");
+    }
+    return handles;
+  }, "round handles");
 }
 
 export const activeRobotFixture = (
@@ -79,9 +144,10 @@ export async function decryptHandles(
   handles: readonly Hex[],
 ) {
   const zap = await getTestLightning();
-  return zap.attestedDecrypt(
-    owner as unknown as LightningWalletClient,
-    [...handles],
+  return withCovalidatorRetry(
+    () =>
+      zap.attestedDecrypt(owner as unknown as LightningWalletClient, [...handles]),
+    `attestedDecrypt of ${handles.length} handle(s)`,
   );
 }
 
@@ -170,12 +236,17 @@ export async function revealAndPack(
   };
   const handles = await challengeGame.read.getChallengeHandles([matchId]);
   const zap = await getTestLightning();
-  const revealed = await zap.attestedReveal(
-    nonZero([
-      ...handles.dice,
-      handles.effectiveCount,
-      ...handles.effectCodes,
-    ]),
+  const requested = nonZero([
+    ...handles.dice,
+    handles.effectiveCount,
+    ...handles.effectCodes,
+  ]);
+
+  // Reveal and pack together: packByHandleOrder throws when an attestation is
+  // missing, which is exactly what an unobserved handle looks like, so the
+  // pack has to be inside the retry rather than after it.
+  return withCovalidatorRetry(
+    async () => packByHandleOrder(handles, await zap.attestedReveal(requested)),
+    `attestedReveal of ${requested.length} handle(s) for match ${matchId}`,
   );
-  return packByHandleOrder(handles, revealed);
 }

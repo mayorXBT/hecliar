@@ -4,10 +4,15 @@
   "private": true,
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test --network anvil",
+    "test": "npm run node:reset && hardhat test --network anvil",
+    "test:fast": "hardhat test --network anvil",
+    "test:pure": "hardhat test --network hardhat",
     "node": "docker compose up",
-    "node:up": "docker compose up -d",
-    "node:down": "docker compose down"
+    "node:up": "docker compose up -d --wait",
+    "node:down": "docker compose down -v",
+    "node:reset": "docker compose down -v && docker compose up -d --wait",
+    "deploy:local": "hardhat ignition deploy ignition/modules/HecliarGame.ts --network anvil",
+    "deploy:testnet": "hardhat ignition deploy ignition/modules/HecliarGame.ts --network baseSepolia"
   },
   "devDependencies": {
     "@inco/lightning-js": "1.0.2",
