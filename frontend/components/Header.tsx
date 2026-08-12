@@ -1,76 +1,68 @@
 "use client";
 
+import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { ThemeToggle } from "./ThemeToggle";
 
+const LINKS = [
+  { href: "#problem", label: "The problem" },
+  { href: "#round", label: "A round" },
+  { href: "#proof", label: "Proof" },
+  { href: "#start", label: "What it costs" },
+];
+
 const Header = () => {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-foreground/40 animate-pulse" />
-          <span className="text-sm font-medium text-foreground">HECLIAR</span>
-        </div>
+    <header className="site-head">
+      <div className="site-head-bar">
+        <Link className="brand" href="/">
+          <span aria-hidden="true" className="brand-mark" />
+          Hecliar
+        </Link>
 
-        <div className="flex items-center gap-3">
+        <nav aria-label="Sections" className="site-nav">
+          {LINKS.map((link) => (
+            <a href={link.href} key={link.href}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="site-head-actions">
           <ThemeToggle />
           <ConnectButton.Custom>
-            {({
-              account,
-              chain,
-              openAccountModal,
-              openChainModal,
-              openConnectModal,
-              mounted,
-            }) => {
-              const ready = mounted;
-              const connected = ready && account && chain;
+            {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
+              const connected = mounted && account && chain;
 
               return (
                 <div
-                  {...(!ready && {
+                  className="head-wallet"
+                  {...(!mounted && {
                     "aria-hidden": true,
-                    style: {
-                      opacity: 0,
-                      pointerEvents: "none",
-                      userSelect: "none",
-                    },
+                    style: { opacity: 0, pointerEvents: "none", userSelect: "none" },
                   })}
                 >
                   {!connected ? (
-                    <button
-                      onClick={openConnectModal}
-                      className="px-4 py-2 text-sm border border-foreground/30 text-foreground hover:bg-foreground hover:text-background transition-colors"
-                    >
-                      connect wallet
+                    <button className="hx-btn hx-btn--ghost hx-btn--sm" onClick={openConnectModal} type="button">
+                      Connect wallet
                     </button>
                   ) : chain.unsupported ? (
-                    <button
-                      onClick={openChainModal}
-                      className="px-4 py-2 text-sm border border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
-                    >
-                      wrong network
+                    <button className="hx-btn hx-btn--secondary hx-btn--sm" onClick={openChainModal} type="button">
+                      Wrong network
                     </button>
                   ) : (
-                    <div className="flex items-center gap-3 text-sm">
-                      <button
-                        onClick={openChainModal}
-                        className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
-                      >
-                        {chain.name?.toLowerCase()}
-                      </button>
-                      <button
-                        onClick={openAccountModal}
-                        className="px-3 py-1.5 border border-foreground/30 text-foreground hover:border-foreground transition-colors"
-                      >
-                        {account.displayName}
-                      </button>
-                    </div>
+                    <button className="hx-btn hx-btn--ghost hx-btn--sm" onClick={openAccountModal} type="button">
+                      {account.displayName}
+                    </button>
                   )}
                 </div>
               );
             }}
           </ConnectButton.Custom>
+
+          <Link className="hx-btn hx-btn--primary hx-btn--sm" href="/play/robot">
+            Play the robot
+          </Link>
         </div>
       </div>
     </header>

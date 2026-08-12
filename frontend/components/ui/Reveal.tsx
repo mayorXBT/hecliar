@@ -33,8 +33,10 @@ export function Reveal({
     const node = ref.current;
     if (!node) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reduced.matches || typeof IntersectionObserver === "undefined") {
+    // jsdom implements neither of these; treat a missing API as "do not
+    // animate" rather than throwing.
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (reduced?.matches !== false || typeof IntersectionObserver === "undefined") {
       setShown(true);
       return;
     }

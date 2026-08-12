@@ -304,7 +304,9 @@
     order: 3;
   }
 
-  .hand-surface {
+  /* Must outrank `.game-table > .hx-surface`, which sets the padding
+     shorthand — otherwise the dock covers the end of the bid controls. */
+  .game-table > .hand-surface {
     padding-bottom: 9rem;
   }
 
