@@ -1,0 +1,193 @@
+/* ==========================================================================
+   Hecliar — Table Noir tokens
+
+   One source of truth. Every colour is stored as a bare HSL triple so that
+   both the semantic layer below and Tailwind's `hsl(var(--x) / <alpha>)`
+   consumers can read the same value, and opacity modifiers keep working.
+
+   Dark is the base theme: `:root` is the felt table. `.light` is the paper
+   table. next-themes writes `class="dark"` or `class="light"` onto <html>,
+   and defaults to dark, so an unstyled first paint is already correct.
+   ========================================================================== */
+
+:root {
+  /* --- palette: felt ---------------------------------------------------- */
+  --felt-900: 218 27% 6%;    /* #0B0E13  page canvas                        */
+  --felt-800: 215 27% 9%;    /* #10151C  alternating band                   */
+  --felt-700: 214 27% 12%;   /* #161D26  raised surface                     */
+  --felt-600: 211 26% 16%;   /* #1E2833  inset / well                       */
+
+  /* --- palette: edges --------------------------------------------------- */
+  --edge: 212 24% 20%;       /* #26313E  hairline                           */
+  --edge-strong: 208 20% 26%;/* #35434F  emphasis, focus ring               */
+
+  /* --- palette: bone ---------------------------------------------------- */
+  --bone: 40 37% 92%;        /* #F2EDE3  primary text, die face             */
+  --bone-dim: 210 15% 71%;   /* #A9B4BF  secondary text                     */
+  --bone-mute: 210 11% 53%;  /* #7A8794  tertiary — 5.2:1 on felt-900, AA   */
+
+  /* --- palette: signal --------------------------------------------------
+     Accent discipline, stated precisely: a coral *fill* marks the
+     irreversible action and nothing else — never a link, border, decoration
+     or hover state. Coral as *text* is reserved for failure. Those two uses
+     do not compete, because only one of them is something you can press.  */
+  --coral: 9 64% 45%;        /* #BC4029  CHALLENGE ONLY — 4.7:1 vs on-coral */
+  --coral-hover: 11 72% 62%; /* #E4735A                                     */
+  --on-coral: 40 40% 95%;    /* #F7F3EC  label on coral, light in both modes */
+  --ember: 40 56% 52%;       /* #C99A3F  pending, awaiting the chain        */
+  --verify: 156 34% 46%;     /* #4E9E7E  settled, attested                  */
+
+  /* --- semantic surfaces ------------------------------------------------ */
+  --surface-page: hsl(var(--felt-900));
+  --surface-band: hsl(var(--felt-800));
+  --surface-raised: hsl(var(--felt-700));
+  --surface-inset: hsl(var(--felt-600));
+
+  /* --- semantic text ---------------------------------------------------- */
+  --text-primary: hsl(var(--bone));
+  --text-secondary: hsl(var(--bone-dim));
+  --text-tertiary: hsl(var(--bone-mute));
+  --text-danger: hsl(var(--coral-hover));   /* 6.4:1 on felt-900 */
+
+  /* --- semantic lines --------------------------------------------------- */
+  --line: hsl(var(--edge));
+  --line-strong: hsl(var(--edge-strong));
+
+  /* --- die ---------------------------------------------------------------
+     The die is a physical object on a dark table: bone body, warm shadow,
+     a real bottom edge. `sealed` inverts it — the die becomes part of the
+     table until the chain lets it be read.                                */
+  --die-face: hsl(var(--bone));
+  --die-pip: hsl(var(--felt-900));
+  --die-edge: 0 0% 0% / 0.55;
+  --die-sealed-face: hsl(var(--felt-600));
+  --die-sealed-line: hsl(var(--edge-strong));
+  --die-sealed-text: hsl(var(--bone-mute));
+
+  /* --- shadcn compatibility ---------------------------------------------
+     Existing Tailwind utilities (bg-background, border-border, and the
+     rest) resolve through these. They alias the palette above rather than
+     declaring a second set of values.                                     */
+  --background: var(--felt-900);
+  --foreground: var(--bone);
+  --card: var(--felt-700);
+  --card-foreground: var(--bone);
+  --popover: var(--felt-700);
+  --popover-foreground: var(--bone);
+  --primary: var(--bone);
+  --primary-foreground: var(--felt-900);
+  --secondary: var(--felt-600);
+  --secondary-foreground: var(--bone);
+  --muted: var(--felt-600);
+  --muted-foreground: var(--bone-mute);
+  --accent: var(--felt-600);
+  --accent-foreground: var(--bone);
+  --destructive: var(--coral);
+  --destructive-foreground: var(--bone);
+  --border: var(--edge);
+  --input: var(--edge);
+  --ring: var(--edge-strong);
+
+  /* --- typography --------------------------------------------------------
+     Three roles. Display carries the voice, interface carries the copy,
+     mono carries anything a machine produced — which is what makes a
+     ciphertext handle read as an artefact rather than as styling.         */
+  --type-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --type-ui: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --type-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --text-3xs: 0.6875rem;                            /* 11 — pip labels     */
+  --text-2xs: 0.75rem;                              /* 12 — eyebrow        */
+  --text-xs: 0.875rem;                              /* 14 — caption        */
+  --text-sm: 1rem;                                  /* 16 — body           */
+  --text-md: 1.125rem;                              /* 18 — lead           */
+  --text-lg: clamp(1.25rem, 1.1rem + 0.6vw, 1.375rem);   /* 20–22          */
+  --text-xl: clamp(1.5rem, 1.25rem + 1.1vw, 1.75rem);    /* 24–28          */
+  --text-2xl: clamp(1.875rem, 1.4rem + 2.1vw, 2.5rem);   /* 30–40          */
+  --text-3xl: clamp(2.25rem, 1.4rem + 3.6vw, 3.5rem);    /* 36–56          */
+  --text-4xl: clamp(2.75rem, 1.3rem + 6vw, 4.75rem);     /* 44–76          */
+
+  --leading-tight: 1.02;
+  --leading-snug: 1.2;
+  --leading-normal: 1.55;
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.14em;
+
+  /* --- space: 4px base -------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  /* --- measure ---------------------------------------------------------- */
+  --w-prose: 62ch;
+  --w-content: 70rem;   /* 1120 */
+  --w-wide: 82.5rem;    /* 1320 */
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+
+  /* --- radius ----------------------------------------------------------- */
+  --radius-chip: 4px;
+  --radius-control: 8px;
+  --radius-die: 12px;
+  --radius-surface: 16px;
+  --radius-pill: 999px;
+  --radius: var(--radius-control);   /* shadcn compatibility */
+
+  /* --- elevation ---------------------------------------------------------
+     No coloured glows. Lift 3 gives the die a bottom edge so it reads as
+     an object resting on the table rather than a tile printed on it.      */
+  --lift-1: inset 0 1px 0 hsl(var(--bone) / 0.04);
+  --lift-2: 0 1px 0 hsl(var(--bone) / 0.03) inset, 0 12px 32px hsl(var(--felt-900) / 0.5);
+  --lift-3: 0 3px 0 hsl(var(--die-edge)), 0 8px 18px hsl(var(--felt-900) / 0.55);
+
+  /* --- motion ----------------------------------------------------------- */
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --dur-reveal: 700ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-snap: cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+/* ==========================================================================
+   Paper table — the same system in warm light. Coral, ember and verify keep
+   their roles and darken one step to hold contrast against paper.
+   ========================================================================== */
+
+.light {
+  --felt-900: 42 31% 94%;    /* #F4F1EA  page canvas                        */
+  --felt-800: 40 26% 91%;    /* #EFEAE0  alternating band                   */
+  --felt-700: 0 0% 100%;     /* #FFFFFF  raised surface                     */
+  --felt-600: 40 22% 93%;    /* #F1ECE3  inset / well                       */
+
+  --edge: 39 19% 77%;        /* #CFC7B8                                     */
+  --edge-strong: 36 17% 60%; /* #A8997F                                     */
+
+  --bone: 36 12% 8%;         /* #171512  ink                                */
+  --bone-dim: 36 16% 30%;    /* #594F3F  secondary — 8.6:1 on paper         */
+  --bone-mute: 34 15% 38%;   /* #6F6353  tertiary  — 5.4:1 on paper, AA     */
+
+  --coral: 10 64% 40%;       /* #A63A25                                     */
+  --coral-hover: 10 68% 34%; /* #92301B  hover deepens on paper             */
+  --text-danger: hsl(var(--coral));   /* 5.8:1 on paper */
+  --ember: 40 64% 34%;       /* #8F6A1F                                     */
+  --verify: 156 40% 31%;     /* #2F6E55                                     */
+
+  --die-face: hsl(var(--felt-700));
+  --die-pip: hsl(var(--bone));
+  --die-edge: 36 17% 46% / 0.4;
+  --die-sealed-face: hsl(var(--felt-600));
+  --die-sealed-line: hsl(var(--edge-strong));
+  --die-sealed-text: hsl(var(--bone-mute));
+
+  --lift-1: inset 0 1px 0 hsl(0 0% 100% / 0.8);
+  --lift-2: 0 1px 2px hsl(36 17% 46% / 0.1), 0 8px 24px hsl(36 17% 46% / 0.12);
+  --lift-3: 0 3px 0 hsl(var(--die-edge)), 0 6px 14px hsl(36 17% 46% / 0.22);
+}

@@ -1,0 +1,804 @@
+/* ==========================================================================
+   Hecliar — base layer
+
+   Element defaults, the table surface itself, and the presentational classes
+   the current components consume. Increment 3 replaces most of the game
+   classes with components under `components/game/`; until then this keeps
+   every screen coherent rather than half-redesigned.
+   ========================================================================== */
+
+/* --- elements ------------------------------------------------------------ */
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--type-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* A lamp over a table, not a grid over a blockchain. The vignette is fixed
+   so it reads as the room the game is played in rather than as page decor. */
+body::before {
+  background: radial-gradient(
+    62rem 40rem at 50% -10%,
+    hsl(var(--felt-600) / 0.85),
+    transparent 70%
+  );
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 0;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+h1, h2 {
+  font-family: var(--type-display);
+  font-weight: 500;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+
+h3, h4 {
+  font-family: var(--type-ui);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: var(--leading-snug);
+}
+
+::selection {
+  background: hsl(var(--bone) / 0.22);
+}
+
+/* --- focus ---------------------------------------------------------------
+   Bone, not a border colour: a focus ring has to clear 3:1 against the felt
+   and `--line-strong` does not.                                            */
+
+:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-chip);
+}
+
+.skip-link {
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  left: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  position: absolute;
+  top: var(--space-4);
+  transform: translateY(-200%);
+  z-index: 100;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* --- surfaces ------------------------------------------------------------ */
+
+.hecliar-panel,
+.table-surface {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--lift-2);
+  min-width: 0;
+}
+
+.landing-shell,
+.setup-page,
+.match-page {
+  margin: 0 auto;
+  padding: clamp(var(--space-8), 7vw, var(--space-24)) 0;
+  width: min(100% - (var(--gutter) * 2), var(--w-content));
+}
+
+/* --- text ---------------------------------------------------------------- */
+
+.eyebrow {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.landing-shell h1 {
+  color: var(--text-primary);
+  font-size: var(--text-4xl);
+  margin: var(--space-3) 0 var(--space-6);
+}
+
+.landing-copy,
+.panel-copy,
+.quiet-note {
+  color: var(--text-secondary);
+  max-width: var(--w-prose);
+}
+
+.quiet-note {
+  font-size: var(--text-xs);
+  margin-top: var(--space-6);
+}
+
+.live-note {
+  color: hsl(var(--ember));
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+}
+
+.error-note {
+  color: var(--text-danger);
+  margin-top: var(--space-4);
+}
+
+/* --- buttons -------------------------------------------------------------
+   Coral appears here once, on `.challenge-action`, and nowhere else in this
+   stylesheet. Challenge is also the only action that takes a full row.     */
+
+.primary-action,
+.secondary-action,
+.raise-action,
+.challenge-action {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--type-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-6);
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+
+.primary-action,
+.raise-action {
+  background: var(--text-primary);
+  color: var(--surface-page);
+}
+
+.primary-action:hover:not(:disabled),
+.raise-action:hover:not(:disabled) {
+  background: hsl(var(--bone) / 0.88);
+}
+
+.secondary-action {
+  border-color: var(--line-strong);
+  color: var(--text-primary);
+}
+
+.secondary-action:hover:not(:disabled) {
+  background: var(--surface-inset);
+}
+
+/* The coral fill is dark in both themes, so the label does not follow `bone`
+   — it stays light. */
+.challenge-action {
+  background: hsl(var(--coral));
+  color: hsl(var(--on-coral));
+  flex: 1 0 100%;
+}
+
+.challenge-action:hover:not(:disabled) {
+  background: hsl(var(--coral-hover));
+}
+
+.primary-action:disabled,
+.secondary-action:disabled,
+.raise-action:disabled,
+.challenge-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.landing-shell .primary-action {
+  margin-right: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.landing-shell .secondary-action {
+  margin-top: var(--space-6);
+}
+
+/* --- setup --------------------------------------------------------------- */
+
+.setup-panel {
+  max-width: 39rem;
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+}
+
+.setup-panel h1 {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  margin: var(--space-2) 0;
+}
+
+.field-label {
+  color: var(--text-secondary);
+  display: block;
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  margin-top: var(--space-6);
+  text-transform: uppercase;
+}
+
+.dice-readout {
+  background: none;
+  border: 0;
+  color: var(--text-primary);
+  display: block;
+  font-family: var(--type-mono);
+  font-size: var(--text-2xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin: var(--space-2) 0 var(--space-3);
+  padding: 0;
+  width: 100%;
+}
+
+.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.segmented-control button {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+
+.segmented-control button:hover {
+  border-color: var(--line-strong);
+  color: var(--text-primary);
+}
+
+.segmented-control button[aria-pressed="true"] {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--surface-page);
+}
+
+.difficulty-fieldset {
+  border: 0;
+  margin-top: var(--space-6);
+  padding: 0;
+}
+
+.difficulty-fieldset legend {
+  color: var(--text-secondary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.choice-label,
+.toggle-label {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-4) 0 0;
+}
+
+.toggle-label {
+  margin-top: var(--space-4);
+}
+
+/* --- table --------------------------------------------------------------- */
+
+.game-table {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 auto;
+  max-width: 52rem;
+}
+
+.table-surface {
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+}
+
+.opponent-surface {
+  align-items: center;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr auto auto;
+}
+
+.opponent-surface strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.hidden-dice {
+  margin: 0;
+}
+
+.scoreline,
+.final-score {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreline i {
+  color: var(--text-tertiary);
+  font-style: normal;
+  margin: 0 var(--space-2);
+}
+
+/* The current bid is the most important fact on the table, so it is the one
+   surface that carries display type at full size. */
+.bid-surface h1 {
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.action-status {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+}
+
+.status-dot {
+  background: hsl(var(--verify));
+  border-radius: var(--radius-pill);
+  flex: none;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.status-dot.pending {
+  background: hsl(var(--ember));
+}
+
+.hand-heading {
+  align-items: start;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.hand-heading h2 {
+  color: var(--text-primary);
+  font-family: var(--type-ui);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: var(--space-1) 0 0;
+}
+
+/* --- dice ----------------------------------------------------------------
+   A die is an object resting on the table: bone face, dark pips, and a real
+   bottom edge from `--lift-3`. A hidden die is the table itself.          */
+
+.dice-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+.die {
+  align-items: center;
+  background: var(--die-face);
+  border-radius: var(--radius-die);
+  box-shadow: var(--lift-3);
+  color: var(--die-pip);
+  display: inline-flex;
+  font-family: var(--type-mono);
+  font-size: clamp(1.25rem, 5vw, 1.75rem);
+  font-variant-numeric: tabular-nums;
+  height: clamp(2.75rem, 10vw, 3.75rem);
+  justify-content: center;
+  width: clamp(2.75rem, 10vw, 3.75rem);
+}
+
+.die-pips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: clamp(0.42rem, 1.6vw, 0.6rem);
+}
+
+.pip {
+  align-self: center;
+  background: var(--die-pip);
+  border-radius: var(--radius-pill);
+  height: clamp(0.38rem, 1.4vw, 0.54rem);
+  justify-self: center;
+  width: clamp(0.38rem, 1.4vw, 0.54rem);
+}
+
+.hidden-die {
+  background: var(--die-sealed-face);
+  border: 1px solid var(--die-sealed-line);
+  box-shadow: var(--lift-1);
+  color: var(--die-sealed-text);
+  font-size: var(--text-md);
+}
+
+/* --- gadget -------------------------------------------------------------- */
+
+.gadget-chip {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-2) var(--space-3);
+  text-transform: uppercase;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+
+.gadget-chip:hover:not(:disabled) {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.gadget-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.target-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.target-picker button {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.scanner-result {
+  color: hsl(var(--verify));
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+}
+
+/* --- bidding ------------------------------------------------------------- */
+
+.bid-controls {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.bid-picker + .bid-picker {
+  margin-top: var(--space-4);
+}
+
+.selector-grid {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.selector-grid button {
+  flex: 1 0 2.75rem;
+  min-width: 2.75rem;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.action-row .raise-action {
+  flex: 1;
+}
+
+.recovery-note {
+  margin-top: var(--space-4);
+}
+
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* --- results ------------------------------------------------------------- */
+
+.result-panel {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+}
+
+.result-panel h1,
+.result-panel h2 {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.reveal-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: var(--space-6) 0;
+}
+
+.reveal-grid > div {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+}
+
+.reveal-grid > div > span {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.result-metrics {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: 0 0 var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.result-metrics div {
+  min-width: 5rem;
+}
+
+.result-metrics dt {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.result-metrics dd {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  margin: var(--space-1) 0 0;
+}
+
+/* --- private room -------------------------------------------------------- */
+
+.waiting-room {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--lift-2);
+  margin: 0 auto;
+  max-width: 36rem;
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+}
+
+.waiting-room h2 {
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-6);
+}
+
+.room-code-display {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.room-code-display .label {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.room-code {
+  color: var(--text-primary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xl);
+  letter-spacing: 0.2em;
+}
+
+.room-settings {
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  margin-top: var(--space-6);
+}
+
+.player-status {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin-top: var(--space-6);
+}
+
+.player-slot {
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--type-mono);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.player-slot > span:first-child {
+  color: var(--text-tertiary);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.player-slot > span:last-child {
+  color: var(--text-secondary);
+}
+
+.player-slot.ready {
+  border-color: hsl(var(--verify));
+}
+
+.player-slot.ready > span:last-child {
+  color: hsl(var(--verify));
+}
+
+.room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+/* --- turn deadline -------------------------------------------------------
+   Driven by `publicMatch.deadlines.actionDeadline`, which already exists on
+   the public view. Wired into the table in increment 3.                    */
+
+.turn-timer {
+  color: var(--text-tertiary);
+  font-family: var(--type-mono);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.turn-timer.timer-low {
+  color: hsl(var(--ember));
+}
+
+/* --- mobile table --------------------------------------------------------
+   Three fixed zones: opponent strip, scrolling middle, pinned action dock.
+   Your dice and the action you take on them stay visible together.        */
+
+@media (max-width: 767px) {
+  .game-table {
+    gap: var(--space-2);
+  }
+
+  .opponent-surface {
+    grid-template-columns: 1fr auto;
+  }
+
+  .opponent-surface .hidden-dice {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .hand-surface {
+    padding-bottom: 8.5rem;
+  }
+
+  .reveal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-action-region {
+    backdrop-filter: blur(16px);
+    background: hsl(var(--felt-900) / 0.94);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-surface);
+    bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    box-shadow: var(--lift-2);
+    left: var(--gutter);
+    margin: 0;
+    padding: var(--space-3);
+    position: fixed;
+    right: var(--gutter);
+    z-index: 20;
+  }
+}
+
+/* --- scrollbar ----------------------------------------------------------- */
+
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-page);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-pill);
+}
+
+/* --- reduced motion ------------------------------------------------------
+   Information is never carried by motion alone, so collapsing every
+   duration removes decoration without removing meaning.                   */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

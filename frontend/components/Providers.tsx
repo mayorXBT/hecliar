@@ -40,10 +40,12 @@ const RainbowKitWithTheme = ({ children }: { children: ReactNode }) => {
     () => false,
   );
 
+  // Bone on felt, matching styles/tokens.css. Coral is reserved for Challenge
+  // and never appears in wallet chrome.
   const rainbowTheme =
     mounted && resolvedTheme === "light"
-      ? lightTheme({ accentColor: "#262626", accentColorForeground: "#fafafa", borderRadius: "none" })
-      : darkTheme({ accentColor: "#d4d4d4", accentColorForeground: "#0a0a0a", borderRadius: "none" });
+      ? lightTheme({ accentColor: "#171512", accentColorForeground: "#F4F1EA", borderRadius: "small" })
+      : darkTheme({ accentColor: "#F2EDE3", accentColorForeground: "#0B0E13", borderRadius: "small" });
 
   return (
     <RainbowKitProvider theme={rainbowTheme}>{children}</RainbowKitProvider>
@@ -52,9 +54,6 @@ const RainbowKitWithTheme = ({ children }: { children: ReactNode }) => {
 
 const Providers = ({ children }: { children: ReactNode }) => {
   if (!projectId) {
-    console.warn(
-      "Missing NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID. Get one at https://cloud.walletconnect.com/"
-    );
   }
 
   return (

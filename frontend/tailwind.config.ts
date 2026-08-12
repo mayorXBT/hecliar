@@ -19,9 +19,33 @@ const config = {
     },
     extend: {
       fontFamily: {
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-newsreader)", "ui-serif", "Georgia", "serif"],
+        sans: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-plex-mono)", "ui-monospace", "monospace"],
       },
       colors: {
+        felt: {
+          900: "hsl(var(--felt-900) / <alpha-value>)",
+          800: "hsl(var(--felt-800) / <alpha-value>)",
+          700: "hsl(var(--felt-700) / <alpha-value>)",
+          600: "hsl(var(--felt-600) / <alpha-value>)",
+        },
+        bone: {
+          DEFAULT: "hsl(var(--bone) / <alpha-value>)",
+          dim: "hsl(var(--bone-dim) / <alpha-value>)",
+          mute: "hsl(var(--bone-mute) / <alpha-value>)",
+        },
+        edge: {
+          DEFAULT: "hsl(var(--edge) / <alpha-value>)",
+          strong: "hsl(var(--edge-strong) / <alpha-value>)",
+        },
+        coral: {
+          DEFAULT: "hsl(var(--coral) / <alpha-value>)",
+          hover: "hsl(var(--coral-hover) / <alpha-value>)",
+        },
+        ember: "hsl(var(--ember) / <alpha-value>)",
+        verify: "hsl(var(--verify) / <alpha-value>)",
+
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

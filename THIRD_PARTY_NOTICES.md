@@ -15,6 +15,19 @@ stage.
 If implementation later adapts code or assets, this file must record the exact
 repository, source path, license, modifications, and required attribution.
 
+## Typefaces
+
+The Table Noir redesign ships three typefaces, fetched and self-hosted at build
+time by `next/font/google`. All three are licensed under the SIL Open Font
+License 1.1, which permits bundling and redistribution with the reserved-name
+and same-license conditions. None has been modified.
+
+| Family | Source | License | Use |
+| --- | --- | --- | --- |
+| Newsreader | https://github.com/productiontype/Newsreader | SIL OFL 1.1 | Display type, `h1`/`h2` only |
+| Archivo | https://github.com/Omnibus-Type/Archivo | SIL OFL 1.1 | Interface and body copy |
+| IBM Plex Mono | https://github.com/IBM/plex | SIL OFL 1.1 | Machine state, counts, ciphertext handles |
+
 ## Official Inco scaffold provenance
 
 `create-inco-app@0.4.0` generated the official EVM Hardhat + RainbowKit
