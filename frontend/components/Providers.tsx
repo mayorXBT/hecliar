@@ -3,6 +3,7 @@
 import { ReactNode, useSyncExternalStore } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
+import { injected } from "wagmi/connectors";
 import {
   getDefaultConfig,
   RainbowKitProvider,
@@ -16,6 +17,16 @@ const queryClient = new QueryClient();
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
+/**
+ * With a WalletConnect project id, RainbowKit's default config brings the full
+ * wallet list including the QR flow — which is the only way to connect a phone
+ * that is not browsing inside a wallet app.
+ *
+ * Without one, the fallback names `injected` explicitly rather than relying on
+ * EIP-6963 discovery alone, so a browser extension is still offered even if a
+ * wallet does not announce itself. That covers desktop and a wallet's in-app
+ * browser, and nothing else.
+ */
 const config = projectId
   ? getDefaultConfig({
       appName: "Hecliar",
@@ -25,6 +36,7 @@ const config = projectId
     })
   : createConfig({
       chains: [activeChain],
+      connectors: [injected()],
       transports: {
         [activeChain.id]: http(),
       },
@@ -53,9 +65,6 @@ const RainbowKitWithTheme = ({ children }: { children: ReactNode }) => {
 };
 
 const Providers = ({ children }: { children: ReactNode }) => {
-  if (!projectId) {
-  }
-
   return (
     // disableTransitionOnChange is load-bearing, not cosmetic. Chrome does not
     // re-resolve a transitioned property when the custom property behind it
