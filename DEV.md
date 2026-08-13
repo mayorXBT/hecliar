@@ -19,15 +19,28 @@ Last updated 13 August 2026.
 
 Explorer: `https://sepolia.basescan.org/address/0xF003E11d9309C55788D3daBA7393453A53AD900B`
 
-**A first deployment at `0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958` is
-superseded and should not be used.** It cannot start a friend match: `setReady`
-was not payable, so when the second player readied up `_generateRound` tried to
-buy randomness from Inco with a zero balance and reverted with
-`CallFailedAfterFeeRefresh`. Robot mode worked there, because
-`createRobotMatch` collects the whole round fee up front.
+**Two earlier deployments are superseded and should not be used.**
 
-The contract is **not verified on Basescan**. Verification is worth doing before
-submission so a judge can read the source next to the address.
+`0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958` cannot *start* a friend match:
+`setReady` was not payable, so when the second player readied up
+`_generateRound` tried to buy randomness from Inco with a zero balance and
+reverted with `CallFailedAfterFeeRefresh`.
+
+`0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72` cannot *finish* one:
+`fundAndStartNextRound` rejected friend mode with `WrongMode`, so a match
+played round one and then sat at `RoundComplete` for good. A match is
+best-of-three, so it could never be won.
+
+Robot mode was unaffected by both, because `createRobotMatch` collects the
+whole round fee up front and seat 0 is the only funder.
+
+The contract is **not verified on Basescan** yet. `hardhat.config.ts` now
+carries the Basescan configuration, so verification is one command once an
+Etherscan V2 key is set (free, from etherscan.io/apis):
+
+```bash
+ETHERSCAN_API_KEY=... npm --workspace contracts run verify -- 0xF003E11d9309C55788D3daBA7393453A53AD900B
+```
 
 ### Inco Lightning
 
@@ -96,29 +109,33 @@ re-runnable:
 npx hardhat run scripts/friend-e2e.ts --network baseSepolia
 ```
 
-Recorded run, room `HEC15486`, match 2:
+Recorded run against the current deployment:
 
 ```
-host  reads own dice: [5,2,5,3]
-guest reads own dice: [4,5,6,1]
+host  reads own dice: [4,1,5,4]
+guest reads own dice: [1,6,5,1]
 REFUSED: the guest cannot read the host's dice
-claiming 3 x 5 (true across both hands)
-revealed 9 handles, effective count 3
-base count 3 · effective count 3 · winner seat 0 · score 1 - 0
+claiming 2 x 4 (true across both hands)
+revealed 9 handles, effective count 2
+base count 2 · effective count 2 · winner seat 0 · score 1 - 0
+round 2 is live, status 3
+fresh dice dealt: yes
+host reads new dice: [1,2,5,6]
 ```
 
 Every step ran on Base Sepolia: `createRoom`, `joinRoom`, both `setReady` calls
 with the seat fee, `attestedDecrypt` per seat, a refused cross-seat decrypt,
-`raise`, `challenge`, `attestedReveal`, and `settleChallenge` (509,334 gas).
+`raise`, `challenge`, `attestedReveal`, `settleChallenge` (~509,000 gas), and
+`fundAndStartNextRound` into a second round with fresh dice.
 
 The arithmetic is checkable from outside: two 5s in the host's hand and one in
 the guest's make three, so a bid of three 5s held. The contract reached the same
 3 by computing over ciphertext it could not read, and the count arrived carrying
 covalidator signatures that `settleChallenge` verified before scoring.
 
-**Still not exercised:** `attestedDecrypt` from a *browser* wallet — the script
+**Still not exercised:** `attestedDecrypt` from a *browser* wallet. The script
 signs with a local key, and MetaMask's signing prompt is a different path.
-Rematch and the second round of a match are also untouched.
+`acceptRematch` is also untouched.
 
 ## Running the app
 
@@ -171,9 +188,9 @@ than redeploying — delete that directory to force a fresh deployment.
 ## Testing
 
 ```bash
-npm --workspace contracts test      # typecheck, reset the node, 47 tests
-npm --workspace frontend test       # 55 tests
-npm --workspace frontend run e2e    # Playwright, not yet run in anger
+npm --workspace contracts test      # typecheck, reset the node, 49 tests
+npm --workspace frontend test       # 60 tests
+npm --workspace frontend run e2e    # Playwright, robot mode on port 3210
 ```
 
 The contract suite resets the Docker node first, so it needs Docker running. Use

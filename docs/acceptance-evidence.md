@@ -30,16 +30,17 @@
 | Third wallet rejected | PASS | rooms "rejects host and third" |
 | Clients converge | PENDING | Needs Playwright |
 | Reload restores match | PENDING | Needs Playwright |
-| Friend rematch mutual | PENDING | Not yet exercised |
+| Friend rematch mutual | PENDING | acceptRematch not yet exercised |
+| Friend match reaches round two | PASS | Base Sepolia, friend-e2e step 9: either seat funds, fresh dice dealt |
 | Friend round settles on chain | PASS | Base Sepolia, friend-e2e steps 6-8: raise, challenge, attested reveal, settle, 1-0 |
 
 ### Test Suite Results
 | Suite | Count | Result |
 |---|---|---|
 | game-logic | 50/50 | PASS |
-| frontend unit | 55/55 | PASS |
-| contract suite (local Inco node) | 47/47 | PASS |
-| confidential round on Base Sepolia | 1/1 | PASS |
+| frontend unit | 60/60 | PASS |
+| contract suite (local Inco node) | 49/49 | PASS |
+| confidential rounds on Base Sepolia | 2/2 | PASS |
 | TypeScript | clean | PASS |
 | Next.js build | succeeds | PASS |
 
