@@ -203,7 +203,7 @@ function RoomScreen() {
 
 export default function RoomJoinPage() {
   return (
-    <GameGatewayProvider>
+    <GameGatewayProvider mode="friend">
       <RoomScreen />
     </GameGatewayProvider>
   );

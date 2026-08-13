@@ -54,5 +54,5 @@ function FriendSetup() {
 }
 
 export default function FriendSetupPage() {
-  return <GameGatewayProvider><FriendSetup /></GameGatewayProvider>;
+  return <GameGatewayProvider mode="friend"><FriendSetup /></GameGatewayProvider>;
 }

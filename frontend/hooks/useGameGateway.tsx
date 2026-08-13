@@ -30,19 +30,41 @@ const GatewayContext = createContext<GatewayState>({
 
 let localGateway: GameGateway | null = null;
 
+export type Mode = "robot" | "friend";
+
 function configuredTransport(): Transport {
   return process.env.NEXT_PUBLIC_GAME_TRANSPORT === "chain" ? "chain" : "local";
+}
+
+/**
+ * Transport follows the mode, not a global setting.
+ *
+ * Neither mode works on the other's transport, so this is a fact about the
+ * game rather than a preference: LocalGameGateway has no friend mode at all,
+ * and an on-chain robot match would sit forever waiting for a turn the robot
+ * route never takes. Treating one env var as the answer for both meant the
+ * deployed site could only ever demonstrate half the product.
+ *
+ * The env var still decides where a match of unknown mode goes.
+ */
+function transportForMode(mode: Mode | null): Transport {
+  if (mode === "robot") return "local";
+  if (mode === "friend") return "chain";
+  return configuredTransport();
 }
 
 export function GameGatewayProvider({
   children,
   gateway,
+  mode = null,
 }: {
   children: ReactNode;
   /** Injected by tests; when present it is used as-is. */
   gateway?: GameGateway;
+  /** Which game this route is. Omitted where the mode is not yet known. */
+  mode?: Mode | null;
 }) {
-  const transport = configuredTransport();
+  const transport = transportForMode(mode);
   const address = configuredAddress();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -60,7 +82,7 @@ export function GameGatewayProvider({
         gateway: null,
         transport,
         unavailable:
-          "This build has no contract address. Set NEXT_PUBLIC_HECLIAR_ADDRESS, or switch NEXT_PUBLIC_GAME_TRANSPORT to local to play the robot without a wallet.",
+          "This build has no contract address, so on-chain play is unavailable. Set NEXT_PUBLIC_HECLIAR_ADDRESS. Playing the robot needs no wallet and still works.",
       };
     }
     if (!publicClient) {

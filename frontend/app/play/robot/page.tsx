@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MatchSettings } from "@hecliar/game-logic";
 import { MatchSetup } from "@/components/setup/MatchSetup";
-import { persistLastMatch } from "@/lib/storage/public-recovery";
+import { persistLastMatch, persistLastMode } from "@/lib/storage/public-recovery";
 import { GameGatewayProvider, useGameGateway, useGatewayState } from "@/hooks/useGameGateway";
 
 function RobotSetup() {
@@ -19,10 +19,13 @@ function RobotSetup() {
     try {
       const id = await gateway.createRobotMatch(settings);
       persistLastMatch(id);
+      // The table serves both modes and cannot tell them apart from an id, so
+      // it reads this to know the match lives in memory rather than on chain.
+      persistLastMode("robot");
       router.push(`/match/${id}`);
     } catch { setError("Could not start the match. Try again."); setStarting(false); }
   }
   return <main className="setup-page"><MatchSetup mode="robot" onStart={start} />{starting && <p className="live-note" aria-live="polite">Setting the table...</p>}{error && <p className="error-note" role="alert">{error}</p>}</main>;
 }
 
-export default function RobotSetupPage() { return <GameGatewayProvider><RobotSetup /></GameGatewayProvider>; }
+export default function RobotSetupPage() { return <GameGatewayProvider mode="robot"><RobotSetup /></GameGatewayProvider>; }
