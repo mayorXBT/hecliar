@@ -91,7 +91,7 @@ NEXT_PUBLIC_HECLIAR_ADDRESS=0xF003E11d9309C55788D3daBA7393453A53AD900B
 
 ```bash
 npm --workspace contracts test    # 49 — resets the local Inco node first
-npm --workspace frontend test     # 61
+npm --workspace frontend test     # 70
 npm --workspace frontend run e2e  # 2 Playwright specs, both viewports
 ```
 
