@@ -34,7 +34,8 @@ describe("GameTable", () => {
 
     expect(screen.getByText("Your dice")).toBeVisible();
     expect(screen.getAllByTestId("own-die")).toHaveLength(4);
-    expect(screen.getByText("4 hidden dice")).toBeVisible();
+    expect(screen.getByLabelText("4 hidden opponent dice")).toBeVisible();
+    expect(screen.getAllByTestId("hidden-die")).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Quantity 2" }));
     fireEvent.click(screen.getByRole("button", { name: "Face 5" }));
     expect(screen.getByRole("button", { name: "Raise" })).toBeDisabled();

@@ -23,7 +23,7 @@ type ContractWrite = {
   write: {
     createRoom(args: [Hex, number, boolean, bigint], opts: { account: `0x${string}` }): Promise<bigint>;
     joinRoom(args: [Hex], opts: { account: `0x${string}` }): Promise<bigint>;
-    setReady(args: [bigint], opts: { account: `0x${string}` }): Promise<void>;
+    setReady(args: [bigint], opts: { account: `0x${string}`; value: bigint }): Promise<void>;
     createRobotMatch(args: [number, boolean, `0x${string}`], opts: { account: `0x${string}`; value: bigint }): Promise<bigint>;
     raise(args: [bigint, number, number, number], opts: { account: `0x${string}` }): Promise<void>;
     challenge(args: [bigint, number], opts: { account: `0x${string}` }): Promise<void>;
@@ -39,6 +39,7 @@ type ContractWrite = {
     // Every field is a handle, including scannerResult, which is an ebool.
     getMyRoundHandles(args: [bigint], opts: { account: `0x${string}` }): Promise<{ dice: readonly Hex[]; gadget: Hex; gadgetTarget: Hex; scannerResult: Hex }>;
     getChallengeHandles(args: [bigint]): Promise<ChallengeHandles>;
+    requiredSeatFee(args: [number, boolean]): Promise<bigint>;
     getRoundResult(args: [bigint, number]): Promise<unknown>;
     requiredRoundFee(args: [number, boolean]): Promise<bigint>;
   };
@@ -147,8 +148,23 @@ export class ChainGameGateway implements GameGateway {
     return this.contract.write.joinRoom([roomHash], { account: this.account });
   }
 
+  /**
+   * Readying up is what pays for a friend round: each seat funds its own dice,
+   * so the two seats together cover the roll that the second ready triggers.
+   * The fee is quoted from the contract rather than computed here, so a change
+   * in the Inco fee cannot leave the client sending a stale amount.
+   */
   async setReady(matchId: bigint): Promise<void> {
-    return this.contract.write.setReady([matchId], { account: this.account });
+    const state = await this.getPublicMatch(matchId);
+    const fee = await this.contract.read.requiredSeatFee([
+      state.settings.diceCount,
+      state.settings.gadgetsEnabled,
+    ]);
+    if (this.onFee) await this.onFee(fee);
+    return this.contract.write.setReady([matchId], {
+      account: this.account,
+      value: fee,
+    });
   }
 
   async getPublicMatch(matchId: bigint): Promise<PublicMatchView> {

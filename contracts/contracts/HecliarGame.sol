@@ -144,6 +144,17 @@ contract HecliarGame {
         return _incoFee() * operations;
     }
 
+    /// @notice What one seat pays to be dealt into a friend round.
+    /// @dev Exactly half of requiredRoundFee: each seat funds its own dice and
+    /// its own gadget, so the two seats together cover the round. A robot match
+    /// has no second payer, so createRobotMatch charges the whole round fee to
+    /// the human instead.
+    function requiredSeatFee(uint8 diceCount, bool gadgetsEnabled) public view returns (uint256) {
+        _validateDiceCount(diceCount);
+        uint256 operations = uint256(diceCount) + (gadgetsEnabled ? 1 : 0);
+        return _incoFee() * operations;
+    }
+
     function raise(uint256 matchId, uint8 quantity, uint8 face, uint32 expectedSequence) external {
         MatchPublic storage state = _requireActiveTurn(matchId, expectedSequence);
         uint8 seat = _seatOf(state, matchId, msg.sender);
@@ -241,11 +252,18 @@ contract HecliarGame {
         _nextRound(matchId, state);
     }
 
-    function setReady(uint256 matchId) external {
+    /// @dev Payable because readying up is what pays for the round. When the
+    /// second seat readies, this calls _generateRound, and every die costs an
+    /// Inco fee. Without a fee here the contract reached _generateRound with a
+    /// zero balance and reverted with CallFailedAfterFeeRefresh, so no friend
+    /// match could ever start.
+    function setReady(uint256 matchId) external payable {
         MatchPublic storage state = _matches[matchId];
         if (state.status != MatchStatus.WaitingForReady) revert WrongStatus(matchId, state.status);
         uint8 seat = _seatOf(state, matchId, msg.sender);
         if (state.ready[seat]) revert AlreadyReady(seat);
+        uint256 requiredFee = requiredSeatFee(state.diceCount, state.gadgetsEnabled);
+        if (msg.value != requiredFee) revert InsufficientIncoFee(requiredFee, msg.value);
         state.ready[seat] = true;
         emit ReadyChanged(matchId, seat, true);
         if (state.ready[0] && state.ready[1]) {

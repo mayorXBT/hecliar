@@ -7,17 +7,24 @@ Last updated 13 August 2026.
 | | |
 | --- | --- |
 | **Contract** | `HecliarGame` |
-| **Address** | `0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958` |
+| **Address** | `0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72` |
 | **Network** | Base Sepolia |
 | **Chain ID** | `84532` |
-| **Deployed at block** | `45404585` |
-| **Deploy transaction** | `0x768c97441003e851e2f68b99cab847006d62c2abffb1f3bb1a18b101845165b5` |
+| **Deployed at block** | `45404585` (v1) / redeployed 13 Aug with the friend-mode fee fix |
+| **Deploy transaction** | `0x768c97441003e851e2f68b99cab847006d62c2abffb1f3bb1a18b101845165b5` (v1) |
 | **Deployer** | `0xe6D52f0dF2ce8698a5DAa33c2Cac1058125B8d6a` |
 | **Bytecode size** | 17,890 bytes |
 | **Deploy gas** | 3,942,437 (0.0000237 ETH) |
 | **Tooling** | Hardhat Ignition, module `HecliarGameModule` |
 
-Explorer: `https://sepolia.basescan.org/address/0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958`
+Explorer: `https://sepolia.basescan.org/address/0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72`
+
+**A first deployment at `0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958` is
+superseded and should not be used.** It cannot start a friend match: `setReady`
+was not payable, so when the second player readied up `_generateRound` tried to
+buy randomness from Inco with a zero balance and reverted with
+`CallFailedAfterFeeRefresh`. Robot mode worked there, because
+`createRobotMatch` collects the whole round fee up front.
 
 The contract is **not verified on Basescan**. Verification is worth doing before
 submission so a judge can read the source next to the address.
@@ -52,6 +59,12 @@ Lightning fee on Base Sepolia is `1e12` wei per operation:
 | 4 | on | 0.000010 ETH |
 | 6 | on | 0.000014 ETH |
 
+`requiredSeatFee` is exactly half of `requiredRoundFee`: each seat in a friend
+match funds its own dice and its own gadget, and the two together cover the
+roll that the second `setReady` triggers. A robot match has no second payer, so
+`createRobotMatch` charges the whole round fee to the human. Verified on chain:
+seat 0.000004 ETH against round 0.000008 ETH at four dice.
+
 A `createRobotMatch` costs about 1.1M gas on top of the fee — roughly
 0.0000066 ETH at current Base Sepolia prices. A full match is cheap, but it is
 not free, and **every round is funded separately** through
@@ -74,10 +87,15 @@ Done against the live deployment, not a local node:
 That last one is the headline claim working on a public testnet: the dice exist
 as ciphertext the contract can compute over and the opponent cannot read.
 
-**Not yet exercised on-chain:** raise, challenge, `attestedDecrypt` from a
-browser wallet, `attestedReveal`, and `settleChallenge`. All four pass against
-the real contract on a local Inco node (see the attested lifecycle tests), but
-have never run on Base Sepolia.
+Against the redeployed contract: `createRoom` succeeds (161,076 gas) and
+`requiredSeatFee` returns 0.000004 ETH against a 0.000008 ETH round fee.
+
+**Not yet exercised on-chain:** `joinRoom`, `setReady` by both seats, raise,
+challenge, `attestedDecrypt` from a browser wallet, `attestedReveal`, and
+`settleChallenge`. All of these pass against the real contract on a local Inco
+node — the friend-mode suite drives room creation through to both seats holding
+their own confidential dice — but completing the sequence on Base Sepolia needs
+a second funded wallet, since `setReady` requires a guest to have joined.
 
 ## Running the app
 
@@ -130,7 +148,7 @@ than redeploying — delete that directory to force a fresh deployment.
 ## Testing
 
 ```bash
-npm --workspace contracts test      # typecheck, reset the node, 42 tests
+npm --workspace contracts test      # typecheck, reset the node, 47 tests
 npm --workspace frontend test       # 55 tests
 npm --workspace frontend run e2e    # Playwright, not yet run in anger
 ```
