@@ -643,3 +643,43 @@ describe("MatchScreen lifecycle", () => {
     await waitFor(() => expect(screen.getByLabelText("Die 1: 6")).toBeVisible());
   });
 });
+
+describe("stale RPC reads", () => {
+  it("ignores a read from a node that is behind the table", async () => {
+    // What the player can already see.
+    const current = publicView({
+      actionSequence: 9,
+      bid: { quantity: 4, face: 6, bidder: 1, sequence: 9 },
+    });
+    // What a lagging node still believes, two actions ago. A public RPC
+    // load-balances across nodes at different heights, so this is what a read
+    // straight after an action can return.
+    const behind = publicView({
+      actionSequence: 7,
+      bid: { quantity: 2, face: 3, bidder: 1, sequence: 7 },
+    });
+
+    let reads = 0;
+    const stale = gateway({
+      getPublicMatch: vi.fn(async () => (reads++ === 0 ? current : behind)),
+    });
+
+    render(<MatchScreen gateway={stale} rawMatchId="1" />);
+    // BidLine splits the sentence across aria-hidden spans and carries the
+    // whole claim on the accessible name, so match that.
+    await screen.findByLabelText(/At least 4 dice show 6/i);
+
+    // Any action refreshes, and this refresh is served by the stale node.
+    fireEvent.click(screen.getByRole("button", { name: "Quantity 5" }));
+    fireEvent.click(screen.getByRole("button", { name: "Raise" }));
+
+    await waitFor(() => expect(stale.getPublicMatch).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+
+    // The older bid must never replace the newer one on screen.
+    expect(screen.queryByLabelText(/At least 2 dice show 3/i)).toBeNull();
+    expect(screen.getByLabelText(/At least 4 dice show 6/i)).toBeTruthy();
+  });
+});

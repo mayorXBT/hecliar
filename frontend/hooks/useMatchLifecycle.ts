@@ -76,6 +76,10 @@ export function useMatchLifecycle({
   const pendingRef = useRef<string | null>(null);
   const recoveryRequiredRef = useRef(false);
   const automaticAttempts = useRef(new Map<string, AutomaticAttempt>());
+  // Highest actionSequence this table has shown. Guards against a lagging RPC
+  // node rendering an older view over a newer one. The hook is keyed by match,
+  // so this starts fresh for each match rather than needing a reset.
+  const lastSequenceRef = useRef(-1);
   const [publicSnapshot, setPublicSnapshot] = useState<Keyed<PublicMatchView> | null>(null);
   const [privateSnapshot, setPrivateSnapshot] = useState<Keyed<PrivatePlayerView> | null>(null);
   const [resultSnapshot, setResultSnapshot] = useState<Keyed<RoundResultView | null> | null>(null);
@@ -93,6 +97,16 @@ export function useMatchLifecycle({
   const refresh = useCallback(async (loadPrivate = true) => {
     const targetKey = matchKey;
     const publicRequest = gateway.getPublicMatch(matchId).then((nextPublic) => {
+      // A public RPC load-balances across nodes at different heights, so a
+      // read can come back from one that has not seen the latest block. Left
+      // alone it moves the table backwards: dice vanish, a settled round
+      // reopens, the current bid reverts to an older one.
+      //
+      // actionSequence only ever increases, so it says which of two views is
+      // older. Anything behind what is already on screen is dropped rather
+      // than rendered.
+      if (nextPublic.actionSequence < lastSequenceRef.current) return null;
+      lastSequenceRef.current = nextPublic.actionSequence;
       setPublicSnapshot({ matchKey: targetKey, value: nextPublic });
       return nextPublic;
     });
