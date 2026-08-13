@@ -5,6 +5,7 @@ import { Archivo, IBM_Plex_Mono, Newsreader } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { Header } from "@/components/Header";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 
 /* Three roles: display carries the voice, interface carries the copy, and
    mono carries anything a machine produced — counts, addresses, ciphertext
@@ -59,6 +60,9 @@ export default function RootLayout({
           <Header />
           {children}
         </Providers>
+        {/* Page views only. No identifiers, no cookies, and nothing from a
+            match: dice never leave the client to begin with. */}
+        <Analytics />
         <Toaster
           position="bottom-center"
           toastOptions={{

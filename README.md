@@ -131,6 +131,57 @@ tests and the scripts share one implementation. It decides which signed values
 get submitted for on-chain verification, which is not code to keep two copies
 of.
 
+## Stack
+
+Each of these earned its place by solving a problem that came up, so the notes
+say what it did rather than that it was used.
+
+### Confidentiality
+
+| | |
+|---|---|
+| **Inco Lightning** `1.0.2` | The whole premise. `euint256` dice live encrypted in contract storage, `e.randBounded` deals them without anyone seeing the result, and the contract compares and counts them while blind. Access is granted per address, which is what makes "only you can read your dice" a protocol rule rather than a UI convention. |
+| **`@inco/lightning-js`** `1.0.2` | The client half. `attestedDecrypt` is signed by the player's wallet, so the covalidator can tell an owner from an opponent; `attestedReveal` returns values with signatures the contract verifies before scoring. |
+
+The covalidator is an observer, not a synchronous service — it polls the chain
+and can only serve a handle once it has seen the block that created it. That
+single fact caused most of the early instability: the contract suite scored
+anywhere from 31 to 36 passes depending on how warm the node was. Every attested
+call now sits behind a bounded retry, which turned a race into a wait.
+
+### Chain
+
+| | |
+|---|---|
+| **Base Sepolia** | Cheap enough that a round costs about 0.000004 ETH per player, so playtesting is free in practice. |
+| **Hardhat** `2.22` + **Ignition** | Compilation, the local node, and deployments that record their own addresses — `wire-frontend.mjs` reads the deployment output so the frontend can never point at a stale contract by hand. |
+| **viem** `2.44` | One typed contract interface across the browser, the tests and the scripts. `simulateContract` earned its keep: `createRoom` returns a match id, and a receipt carries no return value, so the call is simulated for the id and the request it produces is what gets sent. |
+| **Docker** (anvil + covalidator) | The contract suite runs against a real local Inco node rather than a mock, which is the only reason the fee and grant bugs were found before deployment rather than after. |
+
+### App
+
+| | |
+|---|---|
+| **Next.js** `16` + **React** `19` | App Router, with the table as a client component and the landing page static. |
+| **wagmi** `2.19` + **RainbowKit** `2.2` | Wallet connection, and the wallet client that signs each decryption. |
+| **Tailwind** `4` + CSS custom properties | Tokens live in `styles/tokens.css` as HSL triples so one palette drives both themes and Tailwind's opacity modifiers keep working. |
+| **framer-motion** `12` | Motion on the table only. The marketing route ships no animation library — scroll reveals are an IntersectionObserver and a class. |
+| **Vercel** | Preview per push, plus Analytics for page views. |
+
+### Correctness
+
+| | |
+|---|---|
+| **Hardhat + chai** — 49 tests | Against the real Inco node. Found that `setReady` was not payable, so no friend match could start, and that `fundAndStartNextRound` rejected friend mode, so none could finish. |
+| **Vitest** — 70 tests | Including the ones that pin bugs worth never repeating: a guest must not get the controls on the host's turn, a lagging RPC read must not move the table backwards, and the hand-written ABI must match the compiled artifact. |
+| **Playwright** — 2 specs | A full robot match at desktop and mobile, with the confidentiality assertions in between. |
+| **TypeScript** `5.9` strict | Caught the `scannerResult` ABI mismatch — declared `bool`, actually an `ebool` encoding as `bytes32` — before it mis-decoded on a live chain. |
+
+The suites are the reason the demo works. Every bug listed above was found by a
+test or a script rather than by a person clicking through, and the two that
+would have been fatal — a friend match that cannot start, and one that cannot
+finish — were both invisible from the UI.
+
 ## What is not done
 
 Being straight about this, because a hackathon demo should not pretend
