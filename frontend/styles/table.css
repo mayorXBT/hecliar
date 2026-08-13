@@ -227,6 +227,11 @@
   margin: var(--space-2) 0 var(--space-4);
 }
 
+.result-because {
+  color: var(--text-secondary);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
 .result-lead {
   color: var(--text-secondary);
   margin: 0 0 var(--space-6);
@@ -234,9 +239,17 @@
 }
 
 .result-score {
+  align-items: baseline;
   color: var(--text-secondary);
+  display: flex;
   font-size: var(--text-xs);
+  gap: var(--space-3);
   margin: var(--space-6) 0;
+}
+
+.result-score i {
+  color: var(--text-tertiary);
+  font-style: normal;
 }
 
 .result-score strong {

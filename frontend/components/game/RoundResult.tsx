@@ -21,6 +21,11 @@ export function RoundResult({
   pendingAction?: string | null;
 }) {
   const held = result.winner === result.bid.bidder;
+  // Whether the bid held is the mechanism; who won is the thing a player
+  // actually wants to know. "The bidder takes the round" made them remember
+  // who had bid, one screen after the fact.
+  const youWon = result.winner === 0;
+  const winnerName = youWon ? "You take" : "The robot takes";
 
   const rows: ReceiptRow[] = [
     {
@@ -43,7 +48,10 @@ export function RoundResult({
   return (
     <Surface aria-live="polite" className="result-panel" level={3}>
       <p className="eyebrow">Round {held ? "held" : "caught"}</p>
-      <h2>{held ? "The bid held" : "The challenge caught the bluff"}</h2>
+      <h2>{youWon ? "You win the round" : "The robot wins the round"}</h2>
+      <p className="result-because">
+        {held ? "The bid held." : "The challenge caught the bluff."}
+      </p>
 
       <p className="result-lead">
         The claim was at least {result.bid.quantity} dice showing {result.bid.face}.
@@ -76,13 +84,21 @@ export function RoundResult({
         rows={rows}
         verdict={
           held
-            ? `${result.effectiveCount} is enough. The bidder takes the round.`
-            : `${result.effectiveCount} falls short. The challenger takes the round.`
+            ? `${result.effectiveCount} is enough. ${winnerName} the round.`
+            : `${result.effectiveCount} falls short. ${winnerName} the round.`
         }
       />
 
-      <p className="result-score">
-        Match score <strong>{score[0]}</strong> — <strong>{score[1]}</strong>
+      {/* "0 — 1" leaves the player working out which number is theirs, so both
+          sides are named. */}
+      <p aria-label={`Match score, you ${score[0]}, robot ${score[1]}`} className="result-score">
+        <span aria-hidden="true">
+          You <strong>{score[0]}</strong>
+        </span>
+        <i aria-hidden="true">·</i>
+        <span aria-hidden="true">
+          Robot <strong>{score[1]}</strong>
+        </span>
       </p>
 
       <Button
