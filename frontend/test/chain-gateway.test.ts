@@ -190,3 +190,60 @@ describe("ChainGameGateway.settleChallenge", () => {
     expect(settlement.effectiveCountSignatures).toEqual(["0x010203"]);
   });
 });
+
+describe("ChainGameGateway decryption prompts", () => {
+  const handles = {
+    dice: [handle(1), handle(2), handle(3), handle(4), zeroHash, zeroHash],
+    gadget: zeroHash,
+    gadgetTarget: zeroHash,
+    scannerResult: zeroHash,
+  };
+  const revealed = [1, 2, 3, 4].map((n) => attest(handle(n), BigInt(n)));
+
+  function gatewayReading(getMyRoundHandles: ReturnType<typeof vi.fn>) {
+    const attestedDecrypt = vi.fn().mockResolvedValue(revealed);
+    const contract = fakeContract({ read: { getMyRoundHandles } });
+    const chain = new ChainGameGateway(contract as never, account, {
+      walletClient: { mock: true },
+      lightning: async () => ({ attestedDecrypt, attestedReveal: vi.fn() }),
+    });
+    return { chain, attestedDecrypt };
+  }
+
+  it("asks the wallet to sign once for a hand, not once per read", async () => {
+    // Every attestedDecrypt is a signature prompt. Polling used to call this
+    // on a timer, which buried the player under dozens of them.
+    const { chain, attestedDecrypt } = gatewayReading(
+      vi.fn().mockResolvedValue(handles),
+    );
+
+    const first = await chain.getPrivatePlayer(BigInt(1));
+    const second = await chain.getPrivatePlayer(BigInt(1));
+    const third = await chain.getPrivatePlayer(BigInt(1));
+
+    expect(attestedDecrypt).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+    expect(third).toEqual(first);
+  });
+
+  it("decrypts again when a new round deals new dice", async () => {
+    const nextRound = {
+      ...handles,
+      dice: [handle(11), handle(12), handle(13), handle(14), zeroHash, zeroHash],
+    };
+    const getMyRoundHandles = vi
+      .fn()
+      .mockResolvedValueOnce(handles)
+      .mockResolvedValue(nextRound);
+    const { chain, attestedDecrypt } = gatewayReading(getMyRoundHandles);
+    attestedDecrypt.mockResolvedValueOnce(revealed).mockResolvedValue(
+      [11, 12, 13, 14].map((n) => attest(handle(n), BigInt((n % 6) + 1))),
+    );
+
+    await chain.getPrivatePlayer(BigInt(1));
+    await chain.getPrivatePlayer(BigInt(1));
+
+    // Different handles are a different hand, so the cache must not answer.
+    expect(attestedDecrypt).toHaveBeenCalledTimes(2);
+  });
+});

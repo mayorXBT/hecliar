@@ -83,6 +83,9 @@ export function useMatchLifecycle({
   // node rendering an older view over a newer one. The hook is keyed by match,
   // so this starts fresh for each match rather than needing a reset.
   const lastSequenceRef = useRef(-1);
+  // The round whose dice are already decrypted and on screen. Decrypting costs
+  // a wallet signature, so it happens once per round rather than per read.
+  const privateRoundRef = useRef<number | null>(null);
   const [publicSnapshot, setPublicSnapshot] = useState<Keyed<PublicMatchView> | null>(null);
   const [privateSnapshot, setPrivateSnapshot] = useState<Keyed<PrivatePlayerView> | null>(null);
   const [resultSnapshot, setResultSnapshot] = useState<Keyed<RoundResultView | null> | null>(null);
@@ -364,14 +367,43 @@ export function useMatchLifecycle({
     if (publicMatch.mode !== "friend") return;
     if (publicMatch.status === "match-complete" || publicMatch.status === "cancelled") return;
 
+    // Public state only. getPrivatePlayer decrypts this player's dice, and an
+    // attested decryption is signed by the wallet — polling it asked for a
+    // signature every three seconds and buried the player in prompts. Your own
+    // dice cannot change while you are waiting for someone else's move, so
+    // there is nothing to re-read.
     const timer = setInterval(() => {
-      void refresh(true).catch(() => {
+      void refresh(false).catch(() => {
         // Handled by the refresh paths; a failed poll simply leaves the last
         // good view in place until the next one.
       });
     }, POLL_MS);
     return () => clearInterval(timer);
   }, [pendingAction, publicMatch, recoveryRequired, refresh]);
+
+  /**
+   * Pick up a new hand when a friend round starts.
+   *
+   * Only friend matches poll, so only they can reach a new round without this
+   * client having driven it. In a robot match runAction already refreshes the
+   * private view, and re-fetching here fought the recovery path — it put dice
+   * back that a failed read had deliberately cleared.
+   */
+  useEffect(() => {
+    if (!publicMatch || pendingAction || recoveryRequired) return;
+    if (publicMatch.mode !== "friend") return;
+    if (publicMatch.status !== "active-turn") return;
+    if (privateRoundRef.current === publicMatch.round) return;
+
+    privateRoundRef.current = publicMatch.round;
+    void gateway
+      .getPrivatePlayer(matchId)
+      .then((nextPrivate) => setPrivateSnapshot({ matchKey, value: nextPrivate }))
+      .catch(() => {
+        // Leave the round unclaimed so the next pass tries again.
+        privateRoundRef.current = null;
+      });
+  }, [gateway, matchId, matchKey, pendingAction, publicMatch, recoveryRequired]);
 
   useEffect(() => {
     const attemptsByKey = automaticAttempts.current;

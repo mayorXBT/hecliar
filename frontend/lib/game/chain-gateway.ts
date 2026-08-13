@@ -105,6 +105,16 @@ export class ChainGameGateway implements GameGateway {
   private readonly onFee?: (amount: bigint) => Promise<void>;
   private readonly walletClient?: unknown;
   private readonly lightning: () => Promise<LightningLike>;
+  /**
+   * The last decryption, keyed by the handles it was for.
+   *
+   * attestedDecrypt is signed by the wallet, so every call is a prompt the
+   * player has to answer. Handles change when new dice are dealt and not
+   * otherwise, which makes them an exact cache key: the same handles can only
+   * ever decrypt to the same faces. Without this, anything that reads the
+   * player's hand twice asks them to sign twice.
+   */
+  private decrypted: { key: string; view: PrivatePlayerView } | null = null;
 
   /**
    * `walletClient` is required for anything confidential. attestedDecrypt has
@@ -196,6 +206,9 @@ export class ChainGameGateway implements GameGateway {
     const scannerHandle = nonZero([handles.scannerResult])[0];
     const requested = [...diceHandles, ...(gadgetHandle ? [gadgetHandle] : []), ...(scannerHandle ? [scannerHandle] : [])];
 
+    const key = requested.join(",");
+    if (this.decrypted?.key === key) return this.decrypted.view;
+
     const zap = await this.lightning();
     const revealed = await withCovalidatorRetry(
       () => zap.attestedDecrypt(this.walletClient, requested),
@@ -210,11 +223,13 @@ export class ChainGameGateway implements GameGateway {
     const gadgetValue = valueOf(gadgetHandle);
     const scannerValue = valueOf(scannerHandle);
 
-    return {
+    const view: PrivatePlayerView = {
       ownDice,
       gadget: gadgetValue === undefined ? null : GADGET_KINDS[Number(gadgetValue)] ?? null,
       scannerResult: scannerValue === undefined ? null : Boolean(scannerValue),
     };
+    this.decrypted = { key, view };
+    return view;
   }
 
   async getRoundResult(matchId: bigint): Promise<RoundResultView | null> {
