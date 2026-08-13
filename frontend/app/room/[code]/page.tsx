@@ -6,7 +6,12 @@ import type { PublicMatchView } from "@hecliar/game-logic";
 import { ButtonLink } from "@/components/ui/Button";
 import { GameGatewayProvider, useGameGateway, useGatewayState } from "@/hooks/useGameGateway";
 import { isValidRoomCode, normalizeRoomCode, roomHashFromCode } from "@/lib/room-code";
-import { persistLastMatch, persistLastMode, readLastMatchRaw } from "@/lib/storage/public-recovery";
+import {
+  persistLastMatch,
+  persistLastMode,
+  persistRoomMatch,
+  readRoomMatchRaw,
+} from "@/lib/storage/public-recovery";
 
 /**
  * The room, for whoever opens it.
@@ -25,7 +30,6 @@ const POLL_MS = 3000;
 /** The stored id only changes when this tab writes it, and every writer also
  *  sets state, so there is nothing external to subscribe to. */
 const subscribeToNothing = () => () => undefined;
-const readStoredMatchId = () => readLastMatchRaw();
 
 function RoomScreen() {
   const gateway = useGameGateway();
@@ -42,6 +46,7 @@ function RoomScreen() {
   const [pending, setPending] = useState<string | null>(null);
   const [readied, setReadied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readFailures, setReadFailures] = useState(0);
   const busy = useRef(false);
 
   // The host's id survives the redirect from room creation; a guest has none
@@ -51,6 +56,7 @@ function RoomScreen() {
   // server has no sessionStorage, so the server snapshot is null and the
   // client picks the id up on hydration without a mismatch and without a
   // render that shows the wrong screen.
+  const readStoredMatchId = useCallback(() => readRoomMatchRaw(code), [code]);
   const storedMatchId = useSyncExternalStore(
     subscribeToNothing,
     readStoredMatchId,
@@ -62,9 +68,12 @@ function RoomScreen() {
     if (!gateway || matchId === null) return;
     try {
       setMatch(await gateway.getPublicMatch(matchId));
+      setReadFailures(0);
     } catch {
-      // A stale read against a lagging node is not worth surfacing; the next
-      // poll will correct it.
+      // One failed read is a lagging node and not worth mentioning. A run of
+      // them is a stuck screen, and saying nothing at all is how a player ends
+      // up staring at "Getting the room" while the match runs without them.
+      setReadFailures((count) => count + 1);
     }
   }, [gateway, matchId]);
 
@@ -101,6 +110,14 @@ function RoomScreen() {
       await work();
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "";
+      // The transaction landed but the wallet never returned a result — common
+      // over WalletConnect when a phone locks mid-signature. The chain already
+      // has this player as ready, so treat it as done rather than as an error.
+      if (/AlreadyReady/.test(message)) {
+        setReadied(true);
+        void refresh();
+        return;
+      }
       setError(
         /RoomNotFound/.test(message) ? "No room with that code. Check it and try again."
         : /RoomFull/.test(message) ? "That room already has two players."
@@ -117,6 +134,7 @@ function RoomScreen() {
   const join = () =>
     run("Join", async () => {
       const joined = await gateway!.joinFriendRoom(roomHashFromCode(code));
+      persistRoomMatch(code, joined);
       persistLastMatch(joined);
       persistLastMode("friend");
       setJoinedMatchId(joined);
@@ -128,6 +146,11 @@ function RoomScreen() {
       setReadied(true);
       await refresh();
     });
+
+  // The match is live, so the table is where this player belongs. Offered
+  // whenever the chain says so, because the alternative is a screen that has
+  // quietly stopped being true.
+  const started = match?.status === "active-turn";
 
   if (!valid) {
     return (
@@ -172,13 +195,20 @@ function RoomScreen() {
                 ? transport === "chain"
                   ? "Readying up deals your dice and pays for them. Both players must ready before the match starts."
                   : "Both players must ready before the match starts."
-                : readied
-                  ? "You are ready. Waiting for the other player."
-                  : "Getting the room…"}
+                : started
+                  ? "The dice are dealt. Open the table to play."
+                  : readied
+                    ? "You are ready. Waiting for the other player."
+                    : "Getting the room…"}
         </p>
 
         <div className="room-actions">
-          {matchId === null ? (
+          {started ? (
+            // Shown rather than relying only on the automatic redirect: if a
+            // read fails at the wrong moment the redirect never fires, and
+            // this is the difference between playing and staring at a room.
+            <ButtonLink href={`/match/${matchId}`}>Open the table</ButtonLink>
+          ) : matchId === null ? (
             <button className="primary-action" type="button" disabled={Boolean(pending)} onClick={join}>
               {pending ? "Joining…" : "Join room"}
             </button>
@@ -196,6 +226,15 @@ function RoomScreen() {
         </div>
 
         {error && <p className="error-note" role="alert">{error}</p>}
+
+        {readFailures >= 3 && !error && (
+          <p className="error-note" role="alert">
+            The room is not responding. The match may already have started —
+            {matchId === null
+              ? " check the code and try joining again."
+              : " open the table, or reload."}
+          </p>
+        )}
       </section>
     </main>
   );

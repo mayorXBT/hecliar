@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import type { MatchSettings } from "@hecliar/game-logic";
 import { MatchSetup } from "@/components/setup/MatchSetup";
 import { generateRoomCode } from "@/lib/room-code";
-import { persistRoomCode, persistLastMode, persistLastMatch } from "@/lib/storage/public-recovery";
+import {
+  persistLastMatch,
+  persistLastMode,
+  persistRoomCode,
+  persistRoomMatch,
+} from "@/lib/storage/public-recovery";
 import { GameGatewayProvider, useGameGateway, useGatewayState } from "@/hooks/useGameGateway";
 
 function FriendSetup() {
@@ -27,6 +32,10 @@ function FriendSetup() {
       // The id has to survive the redirect: the room screen uses it to poll,
       // and the host has no other way to recover it from the code alone.
       const created = await gateway.createFriendRoom(settings, hash);
+      // Scoped to the room as well, so the room screen recognises this
+      // browser as the host of this specific room and not of whichever match
+      // it happened to play last.
+      persistRoomMatch(code, created);
       persistRoomCode(code);
       persistLastMode("friend");
       persistLastMatch(created);
