@@ -22,6 +22,9 @@ const SEED_PHRASE = process.env.SEED_PHRASE || "";
 const PRIVATE_KEY_BASE = process.env.PRIVATE_KEY_BASE || "";
 
 const BASE_SEPOLIA_RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || "";
+// Basescan verification. Etherscan V2 uses one key across chains; get a
+// free one at etherscan.io/apis and set ETHERSCAN_API_KEY.
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
 const BASE_RPC_URL = process.env.BASE_RPC_URL || "https://mainnet.base.org";
 
 const config: HardhatUserConfig = {
@@ -37,6 +40,19 @@ const config: HardhatUserConfig = {
       },
       evmVersion: "cancun" // Specify the EVM version
     }
+  },
+  etherscan: {
+    apiKey: { baseSepolia: ETHERSCAN_API_KEY, base: ETHERSCAN_API_KEY },
+    customChains: [
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+    ],
   },
   networks: {
     hardhat: {}, // Local Hardhat network

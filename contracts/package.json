@@ -13,7 +13,8 @@
     "node:down": "docker compose down -v",
     "node:reset": "docker compose down -v && docker compose up -d --wait",
     "deploy:local": "hardhat ignition deploy ignition/modules/HecliarGame.ts --network anvil",
-    "deploy:testnet": "hardhat ignition deploy ignition/modules/HecliarGame.ts --network baseSepolia"
+    "deploy:testnet": "hardhat ignition deploy ignition/modules/HecliarGame.ts --network baseSepolia",
+    "verify": "hardhat verify --network baseSepolia"
   },
   "devDependencies": {
     "@inco/lightning-js": "1.0.2",

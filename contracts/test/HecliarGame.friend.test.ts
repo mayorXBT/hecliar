@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { keccak256, toHex, zeroHash } from "viem";
 import hre from "hardhat";
-import { withConfirmedWrites, withCovalidatorRetry } from "./helpers/inco";
+import { settlePresetRound, withConfirmedWrites, withCovalidatorRetry } from "./helpers/inco";
 
 /**
  * Friend mode against the real contract, so Inco fees and grants are real.
@@ -90,6 +90,48 @@ describeInco("HecliarGame friend mode", function () {
       const seat = await game.read.requiredSeatFee([diceCount, gadgets]);
       expect(seat * 2n, `dice=${diceCount} gadgets=${gadgets}`).to.equal(round);
     }
+  });
+
+  it("lets either seat fund the next round, so a best-of-three can finish", async function () {
+    const { game, matchId, host, guest, seatFee, diceCount } = await friendRoom("second-round");
+    await game.write.setReady([matchId], { account: host.account, value: seatFee });
+    await game.write.setReady([matchId], { account: guest.account, value: seatFee });
+
+    // Play round one out so the match reaches RoundComplete.
+    await settlePresetRound({ game, human: host, robot: guest } as never, { winner: 0 });
+
+    const afterRound = await game.read.getPublicMatch([matchId]);
+    expect(afterRound.status, "round one should be complete").to.equal(5);
+
+    // The guest funds, not the host: friend mode has two humans and rejecting
+    // everyone but seat 0 is what left these matches stuck forever.
+    const roundFee = await game.read.requiredRoundFee([diceCount, false]);
+    await game.write.fundAndStartNextRound([matchId, afterRound.actionSequence], {
+      account: guest.account,
+      value: roundFee,
+    });
+
+    const next = await game.read.getPublicMatch([matchId]);
+    expect(next.status, "the next round should be live").to.equal(3);
+    expect(next.roundNumber).to.equal(2);
+  });
+
+  it("refuses to let a stranger fund a friend round", async function () {
+    const { game, matchId, host, guest, seatFee, diceCount } = await friendRoom("stranger-funds");
+    await game.write.setReady([matchId], { account: host.account, value: seatFee });
+    await game.write.setReady([matchId], { account: guest.account, value: seatFee });
+    await settlePresetRound({ game, human: host, robot: guest } as never, { winner: 0 });
+
+    const state = await game.read.getPublicMatch([matchId]);
+    const roundFee = await game.read.requiredRoundFee([diceCount, false]);
+    const [, , outsider] = await hre.viem.getWalletClients();
+
+    await expect(
+      game.write.fundAndStartNextRound([matchId, state.actionSequence], {
+        account: outsider.account,
+        value: roundFee,
+      }),
+    ).to.be.rejectedWith("NotPlayer");
   });
 
   it("refuses to let a non-player read the round handles", async function () {

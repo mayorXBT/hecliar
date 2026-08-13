@@ -7,7 +7,7 @@ Last updated 13 August 2026.
 | | |
 | --- | --- |
 | **Contract** | `HecliarGame` |
-| **Address** | `0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72` |
+| **Address** | `0xF003E11d9309C55788D3daBA7393453A53AD900B` |
 | **Network** | Base Sepolia |
 | **Chain ID** | `84532` |
 | **Deployed at block** | `45404585` (v1) / redeployed 13 Aug with the friend-mode fee fix |
@@ -17,7 +17,7 @@ Last updated 13 August 2026.
 | **Deploy gas** | 3,942,437 (0.0000237 ETH) |
 | **Tooling** | Hardhat Ignition, module `HecliarGameModule` |
 
-Explorer: `https://sepolia.basescan.org/address/0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72`
+Explorer: `https://sepolia.basescan.org/address/0xF003E11d9309C55788D3daBA7393453A53AD900B`
 
 **A first deployment at `0xAE0EbFa13882160d19Ef4fC747564e7f9eDFC958` is
 superseded and should not be used.** It cannot start a friend match: `setReady`

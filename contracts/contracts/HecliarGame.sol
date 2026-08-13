@@ -245,8 +245,15 @@ contract HecliarGame {
         MatchPublic storage state = _matches[matchId];
         if (state.status != MatchStatus.RoundComplete) revert WrongStatus(matchId, state.status);
         if (state.actionSequence != expectedSequence) revert StaleSequence(state.actionSequence, expectedSequence);
-        if (state.mode != Mode.Robot) revert WrongMode(matchId, state.mode);
-        if (msg.sender != state.players[0]) revert NotRoundFunder(matchId, msg.sender);
+        // A robot match has one human, so only seat 0 can fund it. A friend
+        // match has two, and either may pay for the next round — rejecting
+        // friend mode outright left every friend match stuck at RoundComplete
+        // for good, which made a best-of-three impossible to finish.
+        if (state.mode == Mode.Robot) {
+            if (msg.sender != state.players[0]) revert NotRoundFunder(matchId, msg.sender);
+        } else {
+            _seatOf(state, matchId, msg.sender);
+        }
         uint256 requiredFee = requiredRoundFee(state.diceCount, state.gadgetsEnabled);
         if (msg.value != requiredFee) revert InsufficientIncoFee(requiredFee, msg.value);
         _nextRound(matchId, state);

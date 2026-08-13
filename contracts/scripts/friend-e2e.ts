@@ -17,7 +17,7 @@ import { Lightning } from "@inco/lightning-js/lite";
 import hre from "hardhat";
 
 const ADDRESS = (process.env.HECLIAR_ADDRESS
-  ?? "0xb4c65c3f9485ff6B2d8D270BdE1D5338e54FBA72") as `0x${string}`;
+  ?? "0xF003E11d9309C55788D3daBA7393453A53AD900B") as `0x${string}`;
 const DICE = 4;
 
 const nonZero = (handles: readonly Hex[]) => handles.filter((h) => h !== zeroHash);
@@ -82,7 +82,15 @@ async function main() {
 
   step(1, "Host creates room " + code);
   const created = await confirm(game.write.createRoom([roomHash, DICE, false, 3600n], { account: host.account }));
-  const matchId = await game.read.matchByRoomHash([roomHash]);
+  // Read until it is non-zero: the public RPC load-balances across nodes at
+  // different heights, so a read straight after a confirmed write can come
+  // back from one that has not seen it. Zero here silently poisons every
+  // later call with the wrong match.
+  const matchId = await settle("matchByRoomHash", async () => {
+    const id = await game.read.matchByRoomHash([roomHash]);
+    if (id === 0n) throw new Error("room not visible yet");
+    return id;
+  });
   console.log("    matchId " + matchId + ", gas " + created.gasUsed);
 
   step(2, "Guest joins");
@@ -167,7 +175,37 @@ async function main() {
   console.log("\n    the bid " + (bidHeld ? "held" : "failed") + ", so the " + (bidHeld ? "bidder" : "challenger") + " wins");
   if ((result.winnerSeat === 0) !== bidHeld) throw new Error("winner disagrees with the revealed count");
 
-  console.log("\nFull confidential round completed on Base Sepolia.");
+  step(9, "Fund and play a second round");
+  const roundFee = await game.read.requiredRoundFee([DICE, false]);
+  const afterRound = await game.read.getPublicMatch([matchId]);
+  // The guest funds, not the host. A friend match has two humans, and
+  // restricting this to seat 0 left every friend match stuck at RoundComplete,
+  // which made a best-of-three impossible to finish.
+  await settle("fundAndStartNextRound", () =>
+    confirm(game.write.fundAndStartNextRound([matchId, afterRound.actionSequence], {
+      account: guest.account,
+      value: roundFee,
+    })));
+
+  const round2 = await settle("round two", async () => {
+    const next = await game.read.getPublicMatch([matchId]);
+    if (next.roundNumber !== 2 || next.status !== 3) {
+      throw new Error("round " + next.roundNumber + ", status " + next.status);
+    }
+    return next;
+  });
+  console.log("    round " + round2.roundNumber + " is live, status " + round2.status);
+
+  const freshHandles = await handlesFor(host.account);
+  const dealtAgain = freshHandles.join(",") !== hostHandles.join(",");
+  console.log("    fresh dice dealt: " + (dealtAgain ? "yes" : "NO — handles unchanged"));
+  if (!dealtAgain) throw new Error("round two reused round one's handles");
+
+  const round2Dice = (await decrypt(host, freshHandles)).map((r: any) => Number(r.plaintext.value));
+  console.log("    host reads new dice: [" + round2Dice + "]");
+  if (!round2Dice.every((d) => d >= 1 && d <= 6)) throw new Error("die out of range");
+
+  console.log("\nTwo confidential rounds completed on Base Sepolia.");
 }
 
 main().catch((error) => {
