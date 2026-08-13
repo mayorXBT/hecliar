@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { MatchSettings } from "@hecliar/game-logic";
 import { MatchSetup } from "@/components/setup/MatchSetup";
 import { generateRoomCode } from "@/lib/room-code";
-import { persistRoomCode, persistLastMode } from "@/lib/storage/public-recovery";
+import { persistRoomCode, persistLastMode, persistLastMatch } from "@/lib/storage/public-recovery";
 import { GameGatewayProvider, useGameGateway, useGatewayState } from "@/hooks/useGameGateway";
 
 function FriendSetup() {
@@ -24,12 +24,22 @@ function FriendSetup() {
     setError(null);
     try {
       const { code, hash } = generateRoomCode();
+      // The id has to survive the redirect: the room screen uses it to poll,
+      // and the host has no other way to recover it from the code alone.
+      const created = await gateway.createFriendRoom(settings, hash);
       persistRoomCode(code);
       persistLastMode("friend");
-      await gateway.createFriendRoom(settings, hash);
+      persistLastMatch(created);
       router.push(`/room/${code}`);
-    } catch {
-      setError("Could not create the room. Try again.");
+    } catch (caught) {
+      // The local gateway has no friend mode, and telling someone to "try
+      // again" when retrying cannot possibly work is worse than saying so.
+      const message = caught instanceof Error ? caught.message : "";
+      setError(
+        /not available in the local/i.test(message)
+          ? "Friend mode needs the on-chain transport. Set NEXT_PUBLIC_GAME_TRANSPORT to chain and connect a wallet, or play the robot instead."
+          : "Could not create the room. Try again.",
+      );
       setCreating(false);
     }
   }
