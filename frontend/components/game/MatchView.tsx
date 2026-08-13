@@ -7,6 +7,8 @@ import { StatusPip } from "@/components/ui/StatusPip";
 import { GameTable } from "./GameTable";
 import { MatchResult } from "./MatchResult";
 import { RoundResult } from "./RoundResult";
+import { useGatewayState } from "@/hooks/useGameGateway";
+import { opponentName, otherSeat, seatOf } from "@/lib/game/seat";
 
 function RecoveryNotice({
   message,
@@ -51,6 +53,7 @@ export function MatchView({
   matchId: bigint;
   matchKey: string;
 }) {
+  const { account } = useGatewayState();
   const match = useMatchLifecycle({ gateway, matchId, matchKey });
   const {
     publicMatch,
@@ -82,14 +85,21 @@ export function MatchView({
     );
   }
 
+  // Everything below reads from this player's side of the table rather than
+  // assuming seat 0, which is only ever true against the robot.
+  const mySeat = seatOf(publicMatch, account);
+  const theirSeat = otherSeat(mySeat);
+  const opponent = opponentName(publicMatch.mode);
+
   if (publicMatch.status === "match-complete" && result) {
     return (
       <main className="match-page">
         <MatchResult
           onRematch={match.rematch}
           pendingAction={pendingAction}
-          score={publicMatch.score}
-          winner={publicMatch.score[0] === 2 ? 0 : 1}
+          opponent={opponent}
+          score={[publicMatch.score[mySeat], publicMatch.score[theirSeat]]}
+          winner={publicMatch.score[mySeat] === 2 ? 0 : 1}
         />
         {recovery}
       </main>
@@ -102,8 +112,10 @@ export function MatchView({
         <RoundResult
           onContinue={match.continueMatch}
           pendingAction={pendingAction}
+          mySeat={mySeat}
+          opponent={opponent}
           result={result}
-          score={publicMatch.score}
+          score={[publicMatch.score[mySeat], publicMatch.score[theirSeat]]}
         />
         {recovery}
       </main>
@@ -114,12 +126,12 @@ export function MatchView({
     return (
       <main className="match-page">
         <p
-          aria-label={`Score you ${publicMatch.score[0]}, robot ${publicMatch.score[1]}`}
+          aria-label={`Score you ${publicMatch.score[mySeat]}, ${opponent.toLowerCase()} ${publicMatch.score[theirSeat]}`}
           className="scoreline"
         >
-          <span>{publicMatch.score[0]}</span>
+          <span>{publicMatch.score[mySeat]}</span>
           <i aria-hidden="true">:</i>
-          <span>{publicMatch.score[1]}</span>
+          <span>{publicMatch.score[theirSeat]}</span>
         </p>
         {recovery}
       </main>
@@ -140,9 +152,11 @@ export function MatchView({
   return (
     <main className="match-page">
       <GameTable
+        mySeat={mySeat}
         onChallenge={match.challenge}
         onRaise={match.raise}
         onUseGadget={match.useGadget}
+        opponent={opponent}
         pendingAction={pendingAction ?? (recoveryRequired ? "Refresh required" : null)}
         privatePlayer={privatePlayer}
         publicMatch={publicMatch}

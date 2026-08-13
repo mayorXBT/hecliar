@@ -645,6 +645,11 @@ describe("MatchScreen lifecycle", () => {
 });
 
 describe("stale RPC reads", () => {
+  // Without this the rendered tree outlives the test and collides with the
+  // next file to query the document — it made GameTable's "Your dice"
+  // assertion fail about one run in three.
+  afterEach(cleanup);
+
   it("ignores a read from a node that is behind the table", async () => {
     // What the player can already see.
     const current = publicView({

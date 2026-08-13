@@ -64,3 +64,68 @@ describe("GameTable", () => {
     expect(screen.getByRole("group", { name: "Table actions" })).toHaveClass("table-action-region");
   });
 });
+
+describe("GameTable as the guest of a friend room", () => {
+  afterEach(cleanup);
+
+  const friendMatch = {
+    ...publicMatch,
+    mode: "friend" as const,
+    settings: { ...publicMatch.settings, mode: "friend" as const },
+    score: [2, 1] as const,
+  };
+  const privatePlayer = { ownDice: [1, 2, 3, 4] as const, gadget: null, scannerResult: null };
+
+  it("does not offer the controls on the host's turn", () => {
+    // activeSeat 0 is the host. Before this, a guest saw "your turn" here,
+    // the controls enabled, and the contract answered NotActivePlayer.
+    render(
+      <GameTable
+        mySeat={1}
+        onChallenge={vi.fn()}
+        onRaise={vi.fn()}
+        onUseGadget={vi.fn()}
+        opponent="Opponent"
+        privatePlayer={privatePlayer}
+        publicMatch={{ ...friendMatch, activeSeat: 0 }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Raise" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Challenge" })).toBeDisabled();
+  });
+
+  it("offers the controls on the guest's own turn", () => {
+    render(
+      <GameTable
+        mySeat={1}
+        onChallenge={vi.fn()}
+        onRaise={vi.fn()}
+        onUseGadget={vi.fn()}
+        opponent="Opponent"
+        privatePlayer={privatePlayer}
+        publicMatch={{ ...friendMatch, activeSeat: 1 }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Challenge" })).toBeEnabled();
+  });
+
+  it("reads the score from the guest's side and never calls a human a robot", () => {
+    render(
+      <GameTable
+        mySeat={1}
+        onChallenge={vi.fn()}
+        onRaise={vi.fn()}
+        onUseGadget={vi.fn()}
+        opponent="Opponent"
+        privatePlayer={privatePlayer}
+        publicMatch={{ ...friendMatch, activeSeat: 1 }}
+      />,
+    );
+
+    // Stored score is [host 2, guest 1]; the guest is winning 1 to 2 from here.
+    expect(screen.getByLabelText("Score you 1, opponent 2")).toBeTruthy();
+    expect(screen.queryByText("Robot")).toBeNull();
+  });
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PrivatePlayerView, PublicMatchView } from "@hecliar/game-logic";
+import type { PrivatePlayerView, PublicMatchView, Seat } from "@hecliar/game-logic";
 import { ActionStatus } from "./ActionStatus";
 import { BidControls, type RaiseHandler } from "./BidControls";
 import { TurnTimer } from "./TurnTimer";
@@ -29,6 +29,8 @@ export function GameTable({
   onChallenge,
   onUseGadget,
   pendingAction = null,
+  mySeat = 0,
+  opponent = "Robot",
 }: {
   publicMatch: PublicMatchView;
   privatePlayer: PrivatePlayerView;
@@ -36,24 +38,28 @@ export function GameTable({
   onChallenge(): Promise<void> | void;
   onUseGadget(target: number): Promise<void> | void;
   pendingAction?: string | null;
+  /** Seat 0 against the robot; the guest of a friend room sits in seat 1. */
+  mySeat?: Seat;
+  opponent?: string;
 }) {
+  const theirSeat: Seat = mySeat === 0 ? 1 : 0;
   const bid = publicMatch.bid;
   const [choosingTarget, setChoosingTarget] = useState(false);
 
   const canUseGadget =
     !pendingAction &&
-    publicMatch.activeSeat === 0 &&
+    publicMatch.activeSeat === mySeat &&
     publicMatch.status === "active-turn" &&
     (privatePlayer.gadget !== "scanner" || bid !== null);
 
-  const yourTurn = publicMatch.status === "active-turn" && publicMatch.activeSeat === 0;
+  const yourTurn = publicMatch.status === "active-turn" && publicMatch.activeSeat === mySeat;
 
   return (
     <section aria-label="Hecliar game table" className="game-table">
       <Surface aria-label="Opponent" className="opponent-surface" level={1}>
         <div className="opponent-id">
           <p className="eyebrow">Opponent</p>
-          <strong>Robot</strong>
+          <strong>{opponent}</strong>
         </div>
         <DiceRow
           count={publicMatch.settings.diceCount}
@@ -64,12 +70,12 @@ export function GameTable({
           testId="hidden-die"
         />
         <p
-          aria-label={`Score you ${publicMatch.score[0]}, robot ${publicMatch.score[1]}`}
+          aria-label={`Score you ${publicMatch.score[mySeat]}, ${opponent.toLowerCase()} ${publicMatch.score[theirSeat]}`}
           className="scoreline"
         >
-          <span>{publicMatch.score[0]}</span>
+          <span>{publicMatch.score[mySeat]}</span>
           <i aria-hidden="true">:</i>
-          <span>{publicMatch.score[1]}</span>
+          <span>{publicMatch.score[theirSeat]}</span>
         </p>
       </Surface>
 
@@ -142,6 +148,7 @@ export function GameTable({
         )}
 
         <BidControls
+          mySeat={mySeat}
           match={publicMatch}
           onChallenge={onChallenge}
           onRaise={onRaise}

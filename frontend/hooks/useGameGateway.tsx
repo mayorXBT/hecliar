@@ -20,12 +20,18 @@ export type GatewayState = {
   transport: Transport;
   /** Why there is no gateway, in words a player can act on. */
   unavailable: string | null;
+  /**
+   * The connected address, so a screen can work out which seat it is sitting
+   * in. Null on the in-memory transport, where the human is always seat 0.
+   */
+  account: `0x${string}` | null;
 };
 
 const GatewayContext = createContext<GatewayState>({
   gateway: null,
   transport: "local",
   unavailable: "No game transport is configured.",
+  account: null,
 });
 
 let localGateway: GameGateway | null = null;
@@ -70,11 +76,11 @@ export function GameGatewayProvider({
   const { data: walletClient } = useWalletClient();
 
   const value = useMemo<GatewayState>(() => {
-    if (gateway) return { gateway, transport, unavailable: null };
+    if (gateway) return { gateway, transport, unavailable: null, account: null };
 
     if (transport === "local") {
       localGateway ??= new LocalGameGateway();
-      return { gateway: localGateway, transport, unavailable: null };
+      return { gateway: localGateway, transport, unavailable: null, account: null };
     }
 
     if (!address) {
@@ -83,16 +89,18 @@ export function GameGatewayProvider({
         transport,
         unavailable:
           "This build has no contract address, so on-chain play is unavailable. Set NEXT_PUBLIC_HECLIAR_ADDRESS. Playing the robot needs no wallet and still works.",
+        account: null,
       };
     }
     if (!publicClient) {
-      return { gateway: null, transport, unavailable: "Cannot reach the network." };
+      return { gateway: null, transport, unavailable: "Cannot reach the network.", account: null };
     }
     if (!walletClient) {
       return {
         gateway: null,
         transport,
         unavailable: "Connect a wallet to play on-chain.",
+        account: null,
       };
     }
 
@@ -105,6 +113,7 @@ export function GameGatewayProvider({
       }),
       transport,
       unavailable: null,
+      account: walletClient.account.address,
     };
   }, [address, gateway, publicClient, transport, walletClient]);
 

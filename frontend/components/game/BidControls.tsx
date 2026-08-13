@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { legalRaises, type DieFace, type PublicMatchView } from "@hecliar/game-logic";
+import { legalRaises, type DieFace, type PublicMatchView, type Seat } from "@hecliar/game-logic";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui/Button";
 import { Die } from "@/components/ui/Die";
@@ -31,11 +31,14 @@ export function BidControls({
   onRaise,
   onChallenge,
   pending = false,
+  mySeat = 0,
 }: {
   match: PublicMatchView;
   onRaise: RaiseHandler;
   onChallenge(): Promise<void> | void;
   pending?: boolean;
+  /** Seat 0 against the robot; the guest of a friend room sits in seat 1. */
+  mySeat?: Seat;
 }) {
   const [quantity, setQuantity] = useState(match.bid?.quantity ?? 1);
   const [face, setFace] = useState<DieFace>(match.bid?.face ?? 1);
@@ -54,7 +57,9 @@ export function BidControls({
   // three smallest legal bids are 1x1, 1x2, 1x3, which is not advice.
   const quick = useMemo(() => (match.bid ? legal.slice(0, 3) : []), [legal, match.bid]);
 
-  const canAct = match.status === "active-turn" && match.activeSeat === 0;
+  // Gating on seat 0 handed the guest of a friend room live controls on the
+  // host's turn, and the contract answered NotActivePlayer.
+  const canAct = match.status === "active-turn" && match.activeSeat === mySeat;
   const selectionLegal = legalKeys.has(`${quantity}:${face}`);
   const canRaise = !pending && canAct && selectionLegal;
   const canChallenge = !pending && canAct && match.bid !== null;
