@@ -53,6 +53,7 @@ npx hardhat run scripts/friend-e2e.ts --network baseSepolia
 | Contract | [`0xF003E11d9309C55788D3daBA7393453A53AD900B`](https://sepolia.basescan.org/address/0xF003E11d9309C55788D3daBA7393453A53AD900B) |
 | Network | Base Sepolia (84532) |
 | Confidentiality | Inco Lightning |
+| Source | [Verified on Basescan](https://sepolia.basescan.org/address/0xF003E11d9309C55788D3daBA7393453A53AD900B#code) |
 
 ## The game
 
@@ -144,8 +145,6 @@ otherwise:
 - **Gadget effects are not broken out** in the round result. The contract
   stores no per-gadget breakdown, so the difference shows only as
   `effectiveCount - baseCount`.
-- **The contract is not yet verified on Basescan.** The config is wired; it
-  needs an Etherscan V2 key.
 
 Known-good state, remaining gaps and the full deployment history are in
 [`DEV.md`](DEV.md). Acceptance results are in

@@ -41,18 +41,11 @@ const config: HardhatUserConfig = {
       evmVersion: "cancun" // Specify the EVM version
     }
   },
+  // Etherscan V2: one key covers every supported chain and routing is by
+  // chain id, so the per-network keys and custom endpoints that V1 needed are
+  // gone. The V1 endpoints now reject outright.
   etherscan: {
-    apiKey: { baseSepolia: ETHERSCAN_API_KEY, base: ETHERSCAN_API_KEY },
-    customChains: [
-      {
-        network: "baseSepolia",
-        chainId: 84532,
-        urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org",
-        },
-      },
-    ],
+    apiKey: ETHERSCAN_API_KEY,
   },
   networks: {
     hardhat: {}, // Local Hardhat network

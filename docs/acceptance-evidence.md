@@ -21,6 +21,7 @@
 | Authorized roll only | PASS | Base Sepolia, friend-e2e step 4: each seat decrypted only its own dice |
 | Public state hides raw dice | PASS | `getMyRoundHandles` returns ciphertext handles; plaintext appears only in `getRoundResult` after settlement |
 | Opponent cannot access the other roll | PASS | Base Sepolia, friend-e2e step 5: the guest's `attestedDecrypt` of the host's handles was refused |
+| Contract source verified | PASS | Basescan, 0xF003E11d…900B |
 | No secrets in events/logs | PARTIAL | `ChallengeRequested` carries a handle, not a value; a browser-side sweep has not been done |
 
 ### Multiplayer & Recovery

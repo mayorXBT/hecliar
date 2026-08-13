@@ -34,13 +34,19 @@ best-of-three, so it could never be won.
 Robot mode was unaffected by both, because `createRobotMatch` collects the
 whole round fee up front and seat 0 is the only funder.
 
-The contract is **not verified on Basescan** yet. `hardhat.config.ts` now
-carries the Basescan configuration, so verification is one command once an
-Etherscan V2 key is set (free, from etherscan.io/apis):
+The contract is **verified on Basescan**, so the confidentiality claim can be
+read rather than taken on trust:
+<https://sepolia.basescan.org/address/0xF003E11d9309C55788D3daBA7393453A53AD900B#code>
+
+Re-verify a new deployment with:
 
 ```bash
-ETHERSCAN_API_KEY=... npm --workspace contracts run verify -- 0xF003E11d9309C55788D3daBA7393453A53AD900B
+npm --workspace contracts run verify -- <address>
 ```
+
+Etherscan V2 takes one key across all chains and routes by chain id. The V1
+per-network keys and custom endpoints that the config used to carry are
+rejected outright now.
 
 ### Inco Lightning
 
