@@ -19,6 +19,9 @@ import type {
  * without editing the file that owns this logic.
  */
 
+/** Fast enough to feel live, slow enough not to hammer a public RPC. */
+const POLL_MS = 3000;
+
 type Keyed<T> = {
   matchKey: string;
   value: T;
@@ -106,8 +109,25 @@ export function useMatchLifecycle({
       // older. Anything behind what is already on screen is dropped rather
       // than rendered.
       if (nextPublic.actionSequence < lastSequenceRef.current) return null;
+
+      // Only replace the snapshot when the table actually moved. A poll that
+      // hands back an identical view still produces a new object, and the
+      // automatic robot and settlement effects depend on that object — so
+      // churning it tore their timers down and rebuilt them every few
+      // seconds, and the robot never got far enough through its delay to act.
+      setPublicSnapshot((current) => {
+        const previous = current?.matchKey === targetKey ? current.value : null;
+        if (
+          previous
+          && previous.actionSequence === nextPublic.actionSequence
+          && previous.status === nextPublic.status
+        ) {
+          return current;
+        }
+        return { matchKey: targetKey, value: nextPublic };
+      });
+
       lastSequenceRef.current = nextPublic.actionSequence;
-      setPublicSnapshot({ matchKey: targetKey, value: nextPublic });
       return nextPublic;
     });
     const privateRequest = loadPrivate
@@ -320,6 +340,38 @@ export function useMatchLifecycle({
   const publicMatch = publicSnapshot?.matchKey === matchKey ? publicSnapshot.value : null;
   const privatePlayer = privateSnapshot?.matchKey === matchKey ? privateSnapshot.value : null;
   const result = resultSnapshot?.matchKey === matchKey ? resultSnapshot.value : null;
+
+  /**
+   * Keep the table in step with the chain.
+   *
+   * Against the robot every change is driven from this client, so nothing had
+   * to watch for one. In a friend match the other player acts in another
+   * browser and there is no event to wake this one — without a poll the table
+   * freezes on whatever it last read, and the opponent's raise never appears.
+   * That made friend mode unplayable for two humans while looking fine to
+   * each of them.
+   *
+   * Friend matches only. A robot match is driven entirely from here — the
+   * automatic effects below schedule its turn and its settlement — so polling
+   * would watch for changes this client is itself about to make, while
+   * churning the snapshot those effects depend on.
+   *
+   * It also stands down while an action is in flight, and once the match is
+   * over.
+   */
+  useEffect(() => {
+    if (!publicMatch || pendingAction || recoveryRequired) return;
+    if (publicMatch.mode !== "friend") return;
+    if (publicMatch.status === "match-complete" || publicMatch.status === "cancelled") return;
+
+    const timer = setInterval(() => {
+      void refresh(true).catch(() => {
+        // Handled by the refresh paths; a failed poll simply leaves the last
+        // good view in place until the next one.
+      });
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, [pendingAction, publicMatch, recoveryRequired, refresh]);
 
   useEffect(() => {
     const attemptsByKey = automaticAttempts.current;

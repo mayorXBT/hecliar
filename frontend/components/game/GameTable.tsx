@@ -89,7 +89,12 @@ export function GameTable({
         <h1 className="bid-headline">
           <BidLine bid={bid} emptyLabel="Open the bidding" size="lead" />
         </h1>
-        <ActionStatus activeSeat={publicMatch.activeSeat} status={publicMatch.status} />
+        <ActionStatus
+            activeSeat={publicMatch.activeSeat}
+            mySeat={mySeat}
+            opponent={opponent}
+            status={publicMatch.status}
+          />
       </Surface>
 
       <Surface aria-label="Your hand" className="hand-surface" level={2}>

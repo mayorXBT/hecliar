@@ -26,16 +26,23 @@ const TONE: Record<MatchStatus, PipTone> = {
 export function ActionStatus({
   status,
   activeSeat,
+  mySeat = 0,
+  opponent = "Robot",
 }: {
   status: MatchStatus;
   activeSeat: Seat;
+  /** Seat 0 against the robot; the guest of a friend room sits in seat 1. */
+  mySeat?: Seat;
+  opponent?: string;
 }) {
-  const yourTurn = status === "active-turn" && activeSeat === 0;
+  const yourTurn = status === "active-turn" && activeSeat === mySeat;
+  // "Robot is thinking" in a friend match named the wrong opponent and, worse,
+  // was decided by a seat check that a guest always failed.
   const message =
     status === "active-turn"
       ? yourTurn
         ? "Your turn — raise or challenge"
-        : "Robot is thinking"
+        : `${opponent} is thinking`
       : COPY[status];
 
   const tone: PipTone =

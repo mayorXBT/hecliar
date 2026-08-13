@@ -688,3 +688,40 @@ describe("stale RPC reads", () => {
     expect(screen.getByLabelText(/At least 4 dice show 6/i)).toBeTruthy();
   });
 });
+
+describe("waiting on the other player", () => {
+  afterEach(cleanup);
+
+  it("picks up the opponent's move without anything happening locally", async () => {
+    // Against the robot every change is driven from this client. In a friend
+    // match the opponent acts in another browser, and without a poll the table
+    // froze on its first read — the opponent's raise never arrived.
+    const friend = { mode: "friend" as const };
+    const beforeTheirRaise = publicView({
+      ...friend,
+      actionSequence: 4,
+      activeSeat: 1,
+      bid: null,
+    });
+    const afterTheirRaise = publicView({
+      ...friend,
+      actionSequence: 5,
+      activeSeat: 0,
+      bid: { quantity: 4, face: 6, bidder: 1, sequence: 5 },
+    });
+
+    let served = beforeTheirRaise;
+    const watching = gateway({ getPublicMatch: vi.fn(async () => served) });
+
+    render(<MatchScreen gateway={watching} rawMatchId="1" />);
+    await screen.findByText(/Open the bidding/i);
+
+    // The opponent raises. Nothing happens in this browser at all.
+    served = afterTheirRaise;
+
+    await waitFor(
+      () => expect(screen.getByLabelText(/At least 4 dice show 6/i)).toBeTruthy(),
+      { timeout: 8000 },
+    );
+  }, 12_000);
+});
