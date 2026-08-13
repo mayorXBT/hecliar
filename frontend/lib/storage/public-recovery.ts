@@ -6,6 +6,11 @@ export function persistLastMatch(matchId: bigint): void {
   try { sessionStorage.setItem(KEY_MATCH_ID, matchId.toString()); } catch { /* quota or private mode */ }
 }
 
+/** The raw string, for callers that need a stable snapshot to compare. */
+export function readLastMatchRaw(): string | null {
+  try { return sessionStorage.getItem(KEY_MATCH_ID); } catch { return null; }
+}
+
 export function readLastMatch(): bigint | null {
   try {
     const raw = sessionStorage.getItem(KEY_MATCH_ID);

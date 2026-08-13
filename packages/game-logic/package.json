@@ -13,5 +13,12 @@
     "eslint": "^9.33.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
+  },
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   }
 }

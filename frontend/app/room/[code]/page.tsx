@@ -1,12 +1,12 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PublicMatchView } from "@hecliar/game-logic";
 import { ButtonLink } from "@/components/ui/Button";
 import { GameGatewayProvider, useGameGateway, useGatewayState } from "@/hooks/useGameGateway";
 import { isValidRoomCode, normalizeRoomCode, roomHashFromCode } from "@/lib/room-code";
-import { persistLastMatch, persistLastMode, readLastMatch } from "@/lib/storage/public-recovery";
+import { persistLastMatch, persistLastMode, readLastMatchRaw } from "@/lib/storage/public-recovery";
 
 /**
  * The room, for whoever opens it.
@@ -22,6 +22,11 @@ import { persistLastMatch, persistLastMode, readLastMatch } from "@/lib/storage/
 
 const POLL_MS = 3000;
 
+/** The stored id only changes when this tab writes it, and every writer also
+ *  sets state, so there is nothing external to subscribe to. */
+const subscribeToNothing = () => () => undefined;
+const readStoredMatchId = () => readLastMatchRaw();
+
 function RoomScreen() {
   const gateway = useGameGateway();
   const { unavailable, transport } = useGatewayState();
@@ -32,7 +37,7 @@ function RoomScreen() {
   const code = normalizeRoomCode(rawCode ?? "");
   const valid = isValidRoomCode(code);
 
-  const [matchId, setMatchId] = useState<bigint | null>(null);
+  const [joinedMatchId, setJoinedMatchId] = useState<bigint | null>(null);
   const [match, setMatch] = useState<PublicMatchView | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [readied, setReadied] = useState(false);
@@ -41,9 +46,17 @@ function RoomScreen() {
 
   // The host's id survives the redirect from room creation; a guest has none
   // until they join.
-  useEffect(() => {
-    setMatchId(readLastMatch());
-  }, []);
+  //
+  // Read as an external store rather than as state set from an effect. The
+  // server has no sessionStorage, so the server snapshot is null and the
+  // client picks the id up on hydration without a mismatch and without a
+  // render that shows the wrong screen.
+  const storedMatchId = useSyncExternalStore(
+    subscribeToNothing,
+    readStoredMatchId,
+    () => null,
+  );
+  const matchId = joinedMatchId ?? (storedMatchId === null ? null : BigInt(storedMatchId));
 
   const refresh = useCallback(async () => {
     if (!gateway || matchId === null) return;
@@ -57,9 +70,14 @@ function RoomScreen() {
 
   useEffect(() => {
     if (matchId === null) return;
-    void refresh();
+    // The first read is scheduled rather than called inline so the effect does
+    // not set state during the render it was committed from.
+    const first = setTimeout(() => void refresh(), 0);
     const timer = setInterval(() => void refresh(), POLL_MS);
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
   }, [matchId, refresh]);
 
   // Both ready means the dice have been dealt, and the table is where the
@@ -101,7 +119,7 @@ function RoomScreen() {
       const joined = await gateway!.joinFriendRoom(roomHashFromCode(code));
       persistLastMatch(joined);
       persistLastMode("friend");
-      setMatchId(joined);
+      setJoinedMatchId(joined);
     });
 
   const ready = () =>
@@ -115,7 +133,7 @@ function RoomScreen() {
     return (
       <main className="setup-page">
         <p className="error-note" role="alert">
-          That is not a valid room code. Codes are {code.length === 0 ? "8" : "8"} characters.
+          That is not a valid room code. Codes are 12 characters.
         </p>
         <ButtonLink href="/play/friend">Create a room instead</ButtonLink>
       </main>

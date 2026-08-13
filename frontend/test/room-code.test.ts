@@ -33,7 +33,7 @@ describe("room codes", () => {
     for (let i = 0; i < 200; i += 1) {
       const { code } = generateRoomCode();
       expect(isValidRoomCode(code), `${code} should be valid`).toBe(true);
-      expect(code).toHaveLength(8);
+      expect(code).toHaveLength(12);
       seen.add(code);
     }
     // Collisions at this sample size would mean the generator is not random.
@@ -51,7 +51,7 @@ describe("room codes", () => {
   it("rejects codes of the wrong shape", () => {
     expect(isValidRoomCode("")).toBe(false);
     expect(isValidRoomCode("ABC")).toBe(false);
-    expect(isValidRoomCode("ABCDEFGHI")).toBe(false);
+    expect(isValidRoomCode("ABCDEFGHIJKLM")).toBe(false);
     expect(normalizeRoomCode("abc-123!")).toBe("ABC123");
   });
 });
