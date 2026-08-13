@@ -725,3 +725,46 @@ describe("waiting on the other player", () => {
     );
   }, 12_000);
 });
+
+describe("who settles a challenge", () => {
+  afterEach(cleanup);
+
+  const HOST = "0x0000000000000000000000000000000000000001" as const;
+  const GUEST = "0x0000000000000000000000000000000000000002" as const;
+
+  const resolving = publicView({
+    mode: "friend",
+    status: "resolving-challenge",
+    // Seat 0 made the bid, so seat 1 challenged it.
+    bid: { quantity: 2, face: 5, bidder: 0, sequence: 3 },
+  });
+
+  it("settles from the challenger's client", async () => {
+    const settleChallenge = vi.fn(async () => undefined);
+    const asGuest = gateway({
+      getPublicMatch: vi.fn(async () => resolving),
+      settleChallenge,
+    });
+
+    render(<MatchScreen account={GUEST} gateway={asGuest} rawMatchId="1" />);
+
+    await waitFor(() => expect(settleChallenge).toHaveBeenCalled(), { timeout: 8000 });
+  }, 12_000);
+
+  it("does not settle from the bidder's client", async () => {
+    // Both clients used to try, and the loser's revert counted as a failure
+    // until it gave up and told a winning player to start a new match.
+    const settleChallenge = vi.fn(async () => undefined);
+    const asHost = gateway({
+      getPublicMatch: vi.fn(async () => resolving),
+      settleChallenge,
+    });
+
+    render(<MatchScreen account={HOST} gateway={asHost} rawMatchId="1" />);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    });
+    expect(settleChallenge).not.toHaveBeenCalled();
+  }, 12_000);
+});

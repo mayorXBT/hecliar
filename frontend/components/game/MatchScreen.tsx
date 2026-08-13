@@ -35,9 +35,12 @@ function Blocked({ message }: { message: string }) {
 export function MatchScreen({
   gateway,
   rawMatchId,
+  account,
 }: {
   gateway: GameGateway | null;
   rawMatchId: string | string[] | undefined;
+  /** Overrides the connected address. Injected alongside `gateway` in tests. */
+  account?: `0x${string}` | null;
 }) {
   const matchId = parseMatchId(rawMatchId);
   // Says which transport is missing and what to do about it, rather than
@@ -55,5 +58,13 @@ export function MatchScreen({
   const matchKey = matchId.toString();
   // Keyed so a changed match ID remounts the lifecycle rather than leaking
   // the previous match's snapshots into the new one.
-  return <MatchView gateway={gateway} key={matchKey} matchId={matchId} matchKey={matchKey} />;
+  return (
+    <MatchView
+      accountOverride={account}
+      gateway={gateway}
+      key={matchKey}
+      matchId={matchId}
+      matchKey={matchKey}
+    />
+  );
 }

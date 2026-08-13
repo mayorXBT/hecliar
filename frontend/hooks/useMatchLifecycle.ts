@@ -8,6 +8,7 @@ import type {
   PublicMatchView,
   RoundResultView,
 } from "@hecliar/game-logic";
+import { seatOf } from "@/lib/game/seat";
 
 /**
  * The match state machine, lifted out of MatchScreen unchanged.
@@ -71,10 +72,13 @@ export function useMatchLifecycle({
   gateway,
   matchId,
   matchKey,
+  account = null,
 }: {
   gateway: GameGateway;
   matchId: bigint;
   matchKey: string;
+  /** Needed to tell which seat this client is settling for. */
+  account?: `0x${string}` | null;
 }): MatchLifecycle {
   const pendingRef = useRef<string | null>(null);
   const recoveryRequiredRef = useRef(false);
@@ -409,6 +413,20 @@ export function useMatchLifecycle({
     const attemptsByKey = automaticAttempts.current;
     if (!publicMatch || pendingAction || recoveryRequired) return;
     if (publicMatch.status === "resolving-challenge") {
+      // Settling is permissionless, so in a friend match both clients used to
+      // try it with the same expected sequence. One won and the other reverted
+      // with StaleSequence, which counted against a budget of two attempts —
+      // so a perfectly settled round could tell both players to start a new
+      // match.
+      //
+      // The challenger settles: they are the one who asked for the reveal. A
+      // robot match is exempt because the robot has no client, so the human
+      // settles whichever seat challenged.
+      if (publicMatch.mode === "friend" && publicMatch.bid) {
+        const challengerSeat = publicMatch.bid.bidder === 0 ? 1 : 0;
+        if (seatOf(publicMatch, account) !== challengerSeat) return;
+      }
+
       const attemptKey = `${matchKey}:settle:${publicMatch.actionSequence}`;
       const prior = attemptsByKey.get(attemptKey);
       if (prior && prior.state !== "retryable") return;
@@ -429,7 +447,7 @@ export function useMatchLifecycle({
           ),
           { clearPrivate: true, refreshPrivate: false },
         );
-      }, 700);
+      }, publicMatch.mode === "friend" ? 2500 : 700);
       return () => {
         window.clearTimeout(timer);
         const current = attemptsByKey.get(attemptKey);

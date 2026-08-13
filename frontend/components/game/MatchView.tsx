@@ -48,13 +48,17 @@ export function MatchView({
   gateway,
   matchId,
   matchKey,
+  accountOverride,
 }: {
   gateway: GameGateway;
   matchId: bigint;
   matchKey: string;
+  /** Test seam; the connected wallet is the real source. */
+  accountOverride?: `0x${string}` | null;
 }) {
-  const { account } = useGatewayState();
-  const match = useMatchLifecycle({ gateway, matchId, matchKey });
+  const { account: connected } = useGatewayState();
+  const account = accountOverride ?? connected;
+  const match = useMatchLifecycle({ account, gateway, matchId, matchKey });
   const {
     publicMatch,
     privatePlayer,
