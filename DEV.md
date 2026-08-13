@@ -87,15 +87,38 @@ Done against the live deployment, not a local node:
 That last one is the headline claim working on a public testnet: the dice exist
 as ciphertext the contract can compute over and the opponent cannot read.
 
-Against the redeployed contract: `createRoom` succeeds (161,076 gas) and
-`requiredSeatFee` returns 0.000004 ETH against a 0.000008 ETH round fee.
+### A complete confidential round, on chain
 
-**Not yet exercised on-chain:** `joinRoom`, `setReady` by both seats, raise,
-challenge, `attestedDecrypt` from a browser wallet, `attestedReveal`, and
-`settleChallenge`. All of these pass against the real contract on a local Inco
-node — the friend-mode suite drives room creation through to both seats holding
-their own confidential dice — but completing the sequence on Base Sepolia needs
-a second funded wallet, since `setReady` requires a guest to have joined.
+`contracts/scripts/friend-e2e.ts` drives the whole loop with two wallets and is
+re-runnable:
+
+```bash
+npx hardhat run scripts/friend-e2e.ts --network baseSepolia
+```
+
+Recorded run, room `HEC15486`, match 2:
+
+```
+host  reads own dice: [5,2,5,3]
+guest reads own dice: [4,5,6,1]
+REFUSED: the guest cannot read the host's dice
+claiming 3 x 5 (true across both hands)
+revealed 9 handles, effective count 3
+base count 3 · effective count 3 · winner seat 0 · score 1 - 0
+```
+
+Every step ran on Base Sepolia: `createRoom`, `joinRoom`, both `setReady` calls
+with the seat fee, `attestedDecrypt` per seat, a refused cross-seat decrypt,
+`raise`, `challenge`, `attestedReveal`, and `settleChallenge` (509,334 gas).
+
+The arithmetic is checkable from outside: two 5s in the host's hand and one in
+the guest's make three, so a bid of three 5s held. The contract reached the same
+3 by computing over ciphertext it could not read, and the count arrived carrying
+covalidator signatures that `settleChallenge` verified before scoring.
+
+**Still not exercised:** `attestedDecrypt` from a *browser* wallet — the script
+signs with a local key, and MetaMask's signing prompt is a different path.
+Rematch and the second round of a match are also untouched.
 
 ## Running the app
 

@@ -8,6 +8,10 @@ dotenv.config(); // Load environment variables
 mkdirSync(join(__dirname, "artifacts"), { recursive: true });
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY_BASE_SEPOLIA || "";
+// Optional second testnet signer. Friend mode needs two wallets, and
+// setReady requires a guest to have joined, so the end-to-end script cannot
+// be driven from one key.
+const PRIVATE_KEY_GUEST = process.env.PRIVATE_KEY_GUEST_SEPOLIA || "";
 const PRIVATE_KEY_ANVIL = process.env.PRIVATE_KEY_ANVIL || "";
 // The local suites need three signers — human, robot, and an unrelated third
 // wallet used to prove a stranger cannot join or read. A single key leaves
@@ -49,7 +53,7 @@ const config: HardhatUserConfig = {
     },
     baseSepolia: {
       url: BASE_SEPOLIA_RPC_URL,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      accounts: [PRIVATE_KEY, PRIVATE_KEY_GUEST].filter(Boolean),
       chainId: 84532,
     },
     base: {
