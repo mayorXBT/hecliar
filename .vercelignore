@@ -1,0 +1,30 @@
+# The build needs the frontend and game-logic workspaces and nothing else.
+# Uploading the Solidity toolchain's output as well was large enough to reset
+# the connection mid-upload.
+
+node_modules
+.git
+
+# Contract build output and deployment journals: megabytes, none of it read by
+# the Next build. contracts/package.json stays so npm can resolve the
+# workspace list.
+contracts/artifacts
+contracts/cache
+contracts/ignition
+contracts/typechain-types
+contracts/test
+contracts/scripts
+contracts/contracts
+contracts/node_modules
+
+frontend/.next
+frontend/test-results
+frontend/playwright-report
+frontend/node_modules
+
+packages/game-logic/node_modules
+
+# Prototypes and docs, not part of the app.
+ui-redesign-2026-08-11
+docs
+*.log
